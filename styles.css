@@ -98,7 +98,39 @@ input:focus {
     display: flex;
     gap: 15px;
     justify-content: center;
-    margin: 10px 0;
+    margin-top: 25px;
+}
+
+/* Tooltip styling */
+[title] {
+    position: relative;
+    cursor: help;
+}
+
+[title]:hover::before {
+    content: attr(title);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 5px 10px;
+    background: #2c3e50;
+    color: white;
+    font-size: 12px;
+    white-space: nowrap;
+    border-radius: 4px;
+    z-index: 100;
+}
+
+[title]:hover::after {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: #2c3e50;
+    margin-bottom: -12px;
 }
 
 button {

@@ -3,46 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KASCCO 20t Vinç Hesabı</title>
+    <title>Kren Hesabı</title>
     <link rel="stylesheet" href="styles.css">
 </head>
-<body>
-    <div class="container">
-        <h1>KASCCO 20t Vinç Hesabı (Web Uyumlu)</h1>
+<body>    <div class="container">
+        <h1>Kren Hesabı</h1>
         
         <div class="main-frame">
-            <!-- Giriş bölümü -->
-            <div class="input-frame">
+            <!-- Giriş bölümü -->            <div class="input-frame">
                 <h2>Parametreleri Girin:</h2>
                 <div class="input-grid">
                     <div class="input-row">
-                        <label for="Lc">Lc:</label>
-                        <input type="number" id="Lc" step="0.01" value="33.0">
+                        <label for="Lc" title="Kren uzunluğu (m)">Lc:</label>
+                        <input type="number" id="Lc" step="0.01" value="33.0" title="Kren uzunluğu (m)">
                     </div>
                     <div class="input-row">
-                        <label for="ah">ah:</label>
-                        <input type="number" id="ah" step="0.01" value="0.8">
+                        <label for="ah" title="Kanca mesafesi (m)">ah:</label>
+                        <input type="number" id="ah" step="0.01" value="0.8" title="Kanca mesafesi (m)">
                     </div>
                     <div class="input-row">
-                        <label for="aw">aw:</label>
-                        <input type="number" id="aw" step="0.01" value="1.56">
+                        <label for="aw" title="Tekerler arası mesafe (m)">aw:</label>
+                        <input type="number" id="aw" step="0.01" value="1.56" title="Tekerler arası mesafe (m)">
                     </div>
                     <div class="input-row">
-                        <label for="wc">wc:</label>
-                        <input type="number" id="wc" step="0.01" value="380.0">
+                        <label for="wc" title="Kren ağırlığı (kN)">wc:</label>
+                        <input type="number" id="wc" step="0.01" value="380.0" title="Kren ağırlığı (kN)">
                     </div>
                     <div class="input-row">
-                        <label for="wcb">wcb:</label>
-                        <input type="number" id="wcb" step="0.01" value="50.0">
+                        <label for="wcb" title="Kren köprü ağırlığı (kN)">wcb:</label>
+                        <input type="number" id="wcb" step="0.01" value="50.0" title="Kren köprü ağırlığı (kN)">
                     </div>
                     <div class="input-row">
-                        <label for="wcap">wcap:</label>
-                        <input type="number" id="wcap" step="0.01" value="200.0">
+                        <label for="wcap" title="Kren taşıma kapasitesi (kN)">wcap:</label>
+                        <input type="number" id="wcap" step="0.01" value="200.0" title="Kren taşıma kapasitesi (kN)">
                     </div>
                     <div class="input-row">
-                        <label for="L">L:</label>
-                        <input type="number" id="L" step="0.01" value="12.0">
+                        <label for="L" title="Ray uzunluğu (m)">L:</label>
+                        <input type="number" id="L" step="0.01" value="12.0" title="Ray uzunluğu (m)">
                     </div>
+                </div>
+                <!-- Düğmeler -->
+                <div class="button-frame">
+                    <button id="calculate-btn" class="calc-btn">Hesapla</button>
+                    <button id="default-btn" class="default-btn">Varsayılan Değerler</button>
                 </div>
             </div>
             
@@ -64,26 +67,7 @@
                     </div>
                 </div>
             </div>
-            
-            <!-- Parametre açıklamaları -->
-            <div class="descriptions-frame">
-                <h2>Parametre Açıklamaları:</h2>
-                <p>
-                    Lc: Kren uzunluğu (m)<br>
-                    ah: Kanca mesafesi (m)<br>
-                    aw: Tekerler arası mesafe (m)<br>
-                    wc: Kren ağırlığı (kN)<br>
-                    wcb: Kren köprü ağırlığı (kN)<br>
-                    wcap: Kren taşıma kapasitesi (kN)<br>
-                    L: Ray uzunluğu (m)
-                </p>
-            </div>
-            
-            <!-- Düğmeler -->
-            <div class="button-frame">
-                <button id="calculate-btn" class="calc-btn">Hesapla</button>
-                <button id="default-btn" class="default-btn">Varsayılan Değerler</button>
-            </div>
+  
             
             <!-- Sonuç bölümü -->
             <div class="result-frame">

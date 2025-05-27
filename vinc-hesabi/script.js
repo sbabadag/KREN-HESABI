@@ -106,9 +106,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Şematik diyagramları oluşturan fonksiyonlar
     function drawCraneSideView(params) {
         const { Lc, ah, wc, wcb, wcap } = params;
-        
-        const width = 600;
-        const height = 300;
+          const width = 800;
+        const height = 400;
         const scale = width / (Lc * 1.2); // Ölçek faktörü
         
         // SVG oluştur
@@ -169,9 +168,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function drawForceDiagram(params) {
         const { wc, wcb, wcap, Wh1, Wh2A, Wh2B } = params || {};
-        
-        const width = 400;
-        const height = 230;
+          const width = 600;
+        const height = 345;
         
         // SVG oluştur
         let svg = `
@@ -236,9 +234,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function drawBeamDiagram(params) {
-        const { L, aw, WvA_t, WvB_t, MMajor3max } = params;
-        const width = 600;
-        const height = 400;
+        const { L, aw, WvA_t, WvB_t, MMajor3max } = params;        const width = 800;
+        const height = 533;
         const scale = width / (L * 1.3); // Ölçek faktörü
         
         // SVG oluştur

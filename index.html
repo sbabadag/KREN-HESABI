@@ -40,6 +40,17 @@
                         <input type="number" id="L" step="0.01" value="12.0" title="Ray uzunluğu (m)">
                     </div>
                 </div>
+                <div class="input-group">
+                    <label for="L">Kiriş Uzunluğu (m):</label>
+                    <input type="number" id="L" min="0" step="0.1" required>
+                </div>
+                
+                <div class="input-group">
+                    <label for="useStiffeners" class="checkbox-label">
+                        <input type="checkbox" id="useStiffeners">
+                        Gövde Berkitme Levhaları Kullan
+                    </label>
+                </div>
                 <!-- Düğmeler -->
                 <div class="button-frame">
                     <button id="calculate-btn" class="calc-btn">Hesapla</button>

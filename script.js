@@ -117,7 +117,8 @@ document.addEventListener('DOMContentLoaded', function() {
         wc: document.getElementById('wc'),
         wcb: document.getElementById('wcb'),
         wcap: document.getElementById('wcap'),
-        L: document.getElementById('L')
+        L: document.getElementById('L'),
+        useStiffeners: document.getElementById('useStiffeners')
     };
     
     // Hesapla düğmesine tıklama olayı ekle
@@ -369,7 +370,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Sayfa yüklendiğinde şemaları çiz
     drawInitialSchemes();
       // Kesit seçimi yapan fonksiyon
-    function sectionDesign(moment, L) {
+    function sectionDesign(moment, L, useStiffeners = false) {
         // moment is in kNm, we need to work in consistent units throughout
         
         // Calculate required plastic section modulus (cm³)
@@ -379,11 +380,11 @@ document.addEventListener('DOMContentLoaded', function() {
         // φ = 0.9 (safety factor)
         const requiredWpl = (moment * 100) / (27.5 * 0.9);
         
-        // Find suitable section for each profile type
-        const suitableIPE = findSuitableSectionWithBuckling(IPEsections, requiredWpl, L, moment);
-        const suitableHEA = findSuitableSectionWithBuckling(HEAsections, requiredWpl, L, moment);
-        const suitableHEB = findSuitableSectionWithBuckling(HEBsections, requiredWpl, L, moment);
-        const suitableHEM = findSuitableSectionWithBuckling(HEMsections, requiredWpl, L, moment);
+        // Find suitable sections for each profile type with stiffener consideration
+        const suitableIPE = findSuitableSectionWithBuckling(IPEsections, requiredWpl, L, moment, useStiffeners);
+        const suitableHEA = findSuitableSectionWithBuckling(HEAsections, requiredWpl, L, moment, useStiffeners);
+        const suitableHEB = findSuitableSectionWithBuckling(HEBsections, requiredWpl, L, moment, useStiffeners);
+        const suitableHEM = findSuitableSectionWithBuckling(HEMsections, requiredWpl, L, moment, useStiffeners);
         
         // Collect buckling checks
         const buckling = {
@@ -391,6 +392,21 @@ document.addEventListener('DOMContentLoaded', function() {
             HEA: suitableHEA ? suitableHEA.buckling : null,
             HEB: suitableHEB ? suitableHEB.buckling : null,
             HEM: suitableHEM ? suitableHEM.buckling : null
+        };
+        
+        // Collect stiffener information
+        const needsStiffeners = {
+            IPE: suitableIPE ? suitableIPE.needsStiffeners : false,
+            HEA: suitableHEA ? suitableHEA.needsStiffeners : false,
+            HEB: suitableHEB ? suitableHEB.needsStiffeners : false,
+            HEM: suitableHEM ? suitableHEM.needsStiffeners : false
+        };
+        
+        const stiffenerSpacing = {
+            IPE: suitableIPE && suitableIPE.needsStiffeners ? suitableIPE.stiffenerSpacing : null,
+            HEA: suitableHEA && suitableHEA.needsStiffeners ? suitableHEA.stiffenerSpacing : null,
+            HEB: suitableHEB && suitableHEB.needsStiffeners ? suitableHEB.stiffenerSpacing : null,
+            HEM: suitableHEM && suitableHEM.needsStiffeners ? suitableHEM.stiffenerSpacing : null
         };
         
         const result = {
@@ -403,12 +419,14 @@ document.addEventListener('DOMContentLoaded', function() {
             HEAName: suitableHEA ? suitableHEA.section[0] : "Uygun HEA kesit bulunamadı",
             HEBName: suitableHEB ? suitableHEB.section[0] : "Uygun HEB kesit bulunamadı",
             HEMName: suitableHEM ? suitableHEM.section[0] : "Uygun HEM kesit bulunamadı",
-            buckling: buckling
+            buckling: buckling,
+            needsStiffeners: needsStiffeners,
+            stiffenerSpacing: stiffenerSpacing
         };
         
         return result;
     }    // AISC burkulma kontrollerini hesaplayan fonksiyon
-    function calculateBuckling(section, L, moment) {
+    function calculateBuckling(section, L, moment, useStiffeners = true) {
         // Kesit bilgilerini çıkar (all converted to cm)
         const name = section[0];
         const h = section[1] / 10; // mm -> cm
@@ -487,7 +505,17 @@ document.addEventListener('DOMContentLoaded', function() {
         // Local buckling checks
         const h_tw = (h - 2 * tf) / tw;
         const lambda_w = 1.49 * Math.sqrt(E / fy);
-        const webCheck = h_tw <= lambda_w;
+        
+        let webCheck = h_tw <= lambda_w;
+        let effectiveWebRatio = h_tw;
+        let stiffenerInfo = null;
+        
+        if (useStiffeners && !webCheck) {
+            stiffenerInfo = calculateStiffenerSpacing(section, moment, L);
+            // With stiffeners, use modified web ratio
+            effectiveWebRatio = stiffenerInfo.modifiedWebRatio;
+            webCheck = effectiveWebRatio <= lambda_w;
+        }
         
         const b_tf = (b / 2) / tf;
         const lambda_f = 0.56 * Math.sqrt(E / fy);
@@ -499,9 +527,10 @@ document.addEventListener('DOMContentLoaded', function() {
             bucklingSafety: globalSafetyFactor.toFixed(2),
             momentSafety: (PhiMn / moment).toFixed(2),
             bucklingCapacity: PhiPn.toFixed(2),
-            webRatio: h_tw.toFixed(2),
+            webRatio: effectiveWebRatio.toFixed(2),
             webLimit: lambda_w.toFixed(2),
             webCheck: webCheck,
+            stiffenerInfo: stiffenerInfo,
             flangeRatio: b_tf.toFixed(2),
             flangeLimit: lambda_f.toFixed(2),
             flangeCheck: flangeCheck,
@@ -515,56 +544,71 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Burkulma kontrollerini geçen uygun kesiti bulan fonksiyon
-    function findSuitableSectionWithBuckling(sections, requiredWpl, L, moment) {
-        for (let i = 0; i < sections.length; i++) {
-            const section = sections[i];
-            
-            // First check plastic section modulus requirement
-            if (section[7] >= requiredWpl) {
-                const bucklingCheck = calculateBuckling(section, L, moment);
+    function findSuitableSectionWithBuckling(sections, requiredWpl, L, moment, useStiffeners) {
+        // First try without stiffeners
+    for (let i = 0; i < sections.length; i++) {
+        const section = sections[i];
+        if (section[7] >= requiredWpl) {
+            const bucklingCheck = calculateBuckling(section, L, moment, false);
+            if (Number(bucklingCheck.bucklingSafety) >= 1.0 && 
+                bucklingCheck.webCheck && 
+                bucklingCheck.flangeCheck && 
+                Number(bucklingCheck.momentSafety) >= 1.0 && 
+                Number(bucklingCheck.combinedRatio) <= 1.0) {
                 
-                // Comprehensive safety checks:
-                // 1. Combined buckling and moment safety factor > 1.0
-                // 2. Local web buckling check
-                // 3. Local flange buckling check
-                // 4. Pure moment capacity check
-                // 5. Combined ratio check (AISC H1.1)
-                if (Number(bucklingCheck.bucklingSafety) >= 1.0 && 
-                    bucklingCheck.webCheck && 
-                    bucklingCheck.flangeCheck && 
-                    Number(bucklingCheck.momentSafety) >= 1.0 && 
-                    Number(bucklingCheck.combinedRatio) <= 1.0) {
-                    
-                    return {
-                        section: section,
-                        buckling: bucklingCheck
-                    };
-                }
+                return {
+                    section: section,
+                    buckling: bucklingCheck,
+                    needsStiffeners: false
+                };
             }
         }
-        
-        // Try with larger sections if no suitable section found
-        for (let i = 0; i < sections.length; i++) {
-            const section = sections[i];
-            if (section[7] >= requiredWpl * 1.5) { // Try sections with 50% more capacity
-                const bucklingCheck = calculateBuckling(section, L, moment);
-                
-                if (Number(bucklingCheck.bucklingSafety) >= 1.0 && 
-                    bucklingCheck.webCheck && 
-                    bucklingCheck.flangeCheck && 
-                    Number(bucklingCheck.momentSafety) >= 1.0 && 
-                    Number(bucklingCheck.combinedRatio) <= 1.0) {
-                    
-                    return {
-                        section: section,
-                        buckling: bucklingCheck
-                    };
-                }
-            }
-        }
-        
-        return null;
     }
+    
+    // If no suitable section found without stiffeners, try with stiffeners
+    for (let i = 0; i < sections.length; i++) {
+        const section = sections[i];
+        if (section[7] >= requiredWpl) {
+            const bucklingCheck = calculateBuckling(section, L, moment, true);
+            if (Number(bucklingCheck.bucklingSafety) >= 1.0 && 
+                bucklingCheck.webCheck && 
+                bucklingCheck.flangeCheck && 
+                Number(bucklingCheck.momentSafety) >= 1.0 && 
+                Number(bucklingCheck.combinedRatio) <= 1.0) {
+                
+                return {
+                    section: section,
+                    buckling: bucklingCheck,
+                    needsStiffeners: true,
+                    stiffenerSpacing: bucklingCheck.stiffenerInfo.spacing
+                };
+            }
+        }
+    }
+    
+    // If still no suitable section found, try with larger sections and stiffeners
+    for (let i = 0; i < sections.length; i++) {
+        const section = sections[i];
+        if (section[7] >= requiredWpl * 1.2) {
+            const bucklingCheck = calculateBuckling(section, L, moment, true);
+            if (Number(bucklingCheck.bucklingSafety) >= 1.0 && 
+                bucklingCheck.webCheck && 
+                bucklingCheck.flangeCheck && 
+                Number(bucklingCheck.momentSafety) >= 1.0 && 
+                Number(bucklingCheck.combinedRatio) <= 1.0) {
+                
+                return {
+                    section: section,
+                    buckling: bucklingCheck,
+                    needsStiffeners: true,
+                    stiffenerSpacing: bucklingCheck.stiffenerInfo.spacing
+                };
+            }
+        }
+    }
+    
+    return null;
+}
     
     // Kesit çizimini oluşturan fonksiyon
     function drawSection(section, type) {
@@ -653,6 +697,64 @@ document.addEventListener('DOMContentLoaded', function() {
         return svg;
     }
     
+    function createSectionResult(section, name, buckling, needsStiffeners = false, stiffenerSpacing = null) {
+        const sectionDiv = document.createElement('div');
+        sectionDiv.className = 'section-result';
+        
+        const nameElem = document.createElement('h3');
+        nameElem.textContent = section ? section[0] : `Uygun ${name} kesit bulunamadı`;
+        sectionDiv.appendChild(nameElem);
+        
+        if (section && buckling) {
+            const detailsDiv = document.createElement('div');
+            detailsDiv.className = 'section-details';
+            
+            detailsDiv.innerHTML = `
+                <p>Burkulma Güvenliği: ${buckling.bucklingSafety} ${Number(buckling.bucklingSafety) >= 1.0 ? '✓' : '✗'}</p>
+                <p>Gövde Narinliği: ${buckling.webRatio} / ${buckling.webLimit} ${buckling.webCheck ? '✓' : '✗'}</p>
+                <p>Başlık Narinliği: ${buckling.flangeRatio} / ${buckling.flangeLimit} ${buckling.flangeCheck ? '✓' : '✗'}</p>
+                <p>Moment Güvenliği: ${buckling.momentSafety} ${Number(buckling.momentSafety) >= 1.0 ? '✓' : '✗'}</p>
+            `;
+            
+            if (needsStiffeners && stiffenerSpacing) {
+                const stiffenerDiv = document.createElement('div');
+                stiffenerDiv.className = 'stiffener-info';
+                stiffenerDiv.innerHTML = `
+                    <h4>Berkitme Levhaları</h4>
+                    <p>Gerekli Aralık: ${(stiffenerSpacing/100).toFixed(2)} m</p>
+                    <p>Efektif Gövde Narinliği: ${buckling.webRatio}</p>
+                `;
+                detailsDiv.appendChild(stiffenerDiv);
+            }
+            
+            sectionDiv.appendChild(detailsDiv);
+        }
+        
+        return sectionDiv;
+    }
+    
+    function updateResults(result) {
+        sectionResultsDiv.innerHTML = '';
+        
+        const requiredWpl = document.createElement('p');
+        requiredWpl.textContent = `Gerekli Plastik Kesit Modülü: ${result.requiredWpl} cm³`;
+        sectionResultsDiv.appendChild(requiredWpl);
+        
+        // Add section results
+        ['IPE', 'HEA', 'HEB', 'HEM'].forEach(type => {
+            if (result[type]) {
+                const sectionResult = createSectionResult(
+                    result[type],
+                    type,
+                    result.buckling[type],
+                    result.needsStiffeners && result.needsStiffeners[type],
+                    result.stiffenerSpacing && result.stiffenerSpacing[type]
+                );
+                sectionResultsDiv.appendChild(sectionResult);
+            }
+        });
+    }
+    
     // Hesaplama fonksiyonu
     function hesaplaWeb() {
         try {
@@ -704,7 +806,13 @@ document.addEventListener('DOMContentLoaded', function() {
             if (forceDiagram) forceDiagram.innerHTML = drawForceDiagram(params);
             if (beamDiagram) beamDiagram.innerHTML = drawBeamDiagram(params);
               // Kesit tasarımını yap - S275 çeliği için (burkulma kontrollerini içerir)
-            const sectionResult = sectionDesign(MMajor3max, L);            // Sonuçları arayüzde göster - formatı koruyarak
+            const useStiffeners = inputFields.useStiffeners.checked;
+            const designResult = sectionDesign(MMajor3max, L, useStiffeners);
+            
+            // Update the results
+            updateResults(designResult);
+            
+            // Sonuçları arayüzde göster - formatı koruyarak
             const results = 
                 `RA = ${RA.toFixed(2)} kN\nRB = ${RB.toFixed(2)} kN\n` +
                 `W'vA = ${WvA_t.toFixed(2)} kN\nW'vB = ${WvB_t.toFixed(2)} kN\n` +
@@ -715,46 +823,46 @@ document.addEventListener('DOMContentLoaded', function() {
                 `V3Majormax = ${V3Majormax.toFixed(2)} kN\n` +
                 `MMinor1 = ${MMinor1.toFixed(2)} kNm\nMMinor2 = ${MMinor2.toFixed(2)} kNm\n` +
                 `MMinor2max = ${MMinor2max.toFixed(2)} kNm\n\n` +                `--- KESİT TASARIMI (S275 Çeliği) ---\n` +
-                `Gerekli Plastik Kesit Modülü = ${sectionResult.requiredWpl} cm³\n` +
-                `Seçilen IPE Kesiti: ${sectionResult.IPEName} ${sectionResult.IPE && sectionResult.buckling.IPE.bucklingSafety >= 1.0 ? '(Burkulma kontrolü ✓)' : '(Burkulma kontrolü başarısız)'}\n` +
-                `Seçilen HEA Kesiti: ${sectionResult.HEAName} ${sectionResult.HEA && sectionResult.buckling.HEA.bucklingSafety >= 1.0 ? '(Burkulma kontrolü ✓)' : '(Burkulma kontrolü başarısız)'}\n` +
-                `Seçilen HEB Kesiti: ${sectionResult.HEBName} ${sectionResult.HEB && sectionResult.buckling.HEB.bucklingSafety >= 1.0 ? '(Burkulma kontrolü ✓)' : '(Burkulma kontrolü başarısız)'}\n` +
-                `Seçilen HEM Kesiti: ${sectionResult.HEMName} ${sectionResult.HEM && sectionResult.buckling.HEM.bucklingSafety >= 1.0 ? '(Burkulma kontrolü ✓)' : '(Burkulma kontrolü başarısız)'}\n\n` +
+                `Gerekli Plastik Kesit Modülü = ${designResult.requiredWpl} cm³\n` +
+                `Seçilen IPE Kesiti: ${designResult.IPEName} ${designResult.IPE && designResult.buckling.IPE.bucklingSafety >= 1.0 ? '(Burkulma kontrolü ✓)' : '(Burkulma kontrolü başarısız)'}\n` +
+                `Seçilen HEA Kesiti: ${designResult.HEAName} ${designResult.HEA && designResult.buckling.HEA.bucklingSafety >= 1.0 ? '(Burkulma kontrolü ✓)' : '(Burkulma kontrolü başarısız)'}\n` +
+                `Seçilen HEB Kesiti: ${designResult.HEBName} ${designResult.HEB && designResult.buckling.HEB.bucklingSafety >= 1.0 ? '(Burkulma kontrolü ✓)' : '(Burkulma kontrolü başarısız)'}\n` +
+                `Seçilen HEM Kesiti: ${designResult.HEMName} ${designResult.HEM && designResult.buckling.HEM.bucklingSafety >= 1.0 ? '(Burkulma kontrolü ✓)' : '(Burkulma kontrolü başarısız)'}\n\n` +
                 `--- BURKULMA KONTROLLERİ (AISC) ---\n` +
-                (sectionResult.IPE ? `IPE ${sectionResult.IPE[0]}:\n` +
-                `  Narinlik Oranı (KL/r) = ${sectionResult.buckling.IPE.KL_ry}\n` +
-                `  Global Burkulma Emniyet Faktörü = ${sectionResult.buckling.IPE.bucklingSafety} ${Number(sectionResult.buckling.IPE.bucklingSafety) >= 1.0 ? '✓' : '✗'}\n` +
-                `  Gövde Yerel Burkulma Kontrolü: h/tw = ${sectionResult.buckling.IPE.webRatio} <= ${sectionResult.buckling.IPE.webLimit} ${sectionResult.buckling.IPE.webCheck ? '✓' : '✗'}\n` +
-                `  Başlık Yerel Burkulma Kontrolü: b/(2*tf) = ${sectionResult.buckling.IPE.flangeRatio} <= ${sectionResult.buckling.IPE.flangeLimit} ${sectionResult.buckling.IPE.flangeCheck ? '✓' : '✗'}\n` : '') +
-                (sectionResult.HEA ? `\nHEA ${sectionResult.HEA[0]}:\n` +
-                `  Narinlik Oranı (KL/r) = ${sectionResult.buckling.HEA.KL_ry}\n` +
-                `  Global Burkulma Emniyet Faktörü = ${sectionResult.buckling.HEA.bucklingSafety} ${Number(sectionResult.buckling.HEA.bucklingSafety) >= 1.0 ? '✓' : '✗'}\n` +
-                `  Gövde Yerel Burkulma Kontrolü: h/tw = ${sectionResult.buckling.HEA.webRatio} <= ${sectionResult.buckling.HEA.webLimit} ${sectionResult.buckling.HEA.webCheck ? '✓' : '✗'}\n` +
-                `  Başlık Yerel Burkulma Kontrolü: b/(2*tf) = ${sectionResult.buckling.HEA.flangeRatio} <= ${sectionResult.buckling.HEA.flangeLimit} ${sectionResult.buckling.HEA.flangeCheck ? '✓' : '✗'}\n` : '') +
-                (sectionResult.HEB ? `\nHEB ${sectionResult.HEB[0]}:\n` +
-                `  Narinlik Oranı (KL/r) = ${sectionResult.buckling.HEB.KL_ry}\n` +
-                `  Global Burkulma Emniyet Faktörü = ${sectionResult.buckling.HEB.bucklingSafety} ${Number(sectionResult.buckling.HEB.bucklingSafety) >= 1.0 ? '✓' : '✗'}\n` +
-                `  Gövde Yerel Burkulma Kontrolü: h/tw = ${sectionResult.buckling.HEB.webRatio} <= ${sectionResult.buckling.HEB.webLimit} ${sectionResult.buckling.HEB.webCheck ? '✓' : '✗'}\n` +
-                `  Başlık Yerel Burkulma Kontrolü: b/(2*tf) = ${sectionResult.buckling.HEB.flangeRatio} <= ${sectionResult.buckling.HEB.flangeLimit} ${sectionResult.buckling.HEB.flangeCheck ? '✓' : '✗'}\n` : '') +
-                (sectionResult.HEM ? `\nHEM ${sectionResult.HEM[0]}:\n` +
-                `  Narinlik Oranı (KL/r) = ${sectionResult.buckling.HEM.KL_ry}\n` +
-                `  Global Burkulma Emniyet Faktörü = ${sectionResult.buckling.HEM.bucklingSafety} ${Number(sectionResult.buckling.HEM.bucklingSafety) >= 1.0 ? '✓' : '✗'}\n` +
-                `  Gövde Yerel Burkulma Kontrolü: h/tw = ${sectionResult.buckling.HEM.webRatio} <= ${sectionResult.buckling.HEM.webLimit} ${sectionResult.buckling.HEM.webCheck ? '✓' : '✗'}\n` +
-                `  Başlık Yerel Burkulma Kontrolü: b/(2*tf) = ${sectionResult.buckling.HEM.flangeRatio} <= ${sectionResult.buckling.HEM.flangeLimit} ${sectionResult.buckling.HEM.flangeCheck ? '✓' : '✗'}\n` : '');
+                (designResult.IPE ? `IPE ${designResult.IPE[0]}:\n` +
+                `  Narinlik Oranı (KL/r) = ${designResult.buckling.IPE.KL_ry}\n` +
+                `  Global Burkulma Emniyet Faktörü = ${designResult.buckling.IPE.bucklingSafety} ${Number(designResult.buckling.IPE.bucklingSafety) >= 1.0 ? '✓' : '✗'}\n` +
+                `  Gövde Yerel Burkulma Kontrolü: h/tw = ${designResult.buckling.IPE.webRatio} <= ${designResult.buckling.IPE.webLimit} ${designResult.buckling.IPE.webCheck ? '✓' : '✗'}\n` +
+                `  Başlık Yerel Burkulma Kontrolü: b/(2*tf) = ${designResult.buckling.IPE.flangeRatio} <= ${designResult.buckling.IPE.flangeLimit} ${designResult.buckling.IPE.flangeCheck ? '✓' : '✗'}\n` : '') +
+                (designResult.HEA ? `\nHEA ${designResult.HEA[0]}:\n` +
+                `  Narinlik Oranı (KL/r) = ${designResult.buckling.HEA.KL_ry}\n` +
+                `  Global Burkulma Emniyet Faktörü = ${designResult.buckling.HEA.bucklingSafety} ${Number(designResult.buckling.HEA.bucklingSafety) >= 1.0 ? '✓' : '✗'}\n` +
+                `  Gövde Yerel Burkulma Kontrolü: h/tw = ${designResult.buckling.HEA.webRatio} <= ${designResult.buckling.HEA.webLimit} ${designResult.buckling.HEA.webCheck ? '✓' : '✗'}\n` +
+                `  Başlık Yerel Burkulma Kontrolü: b/(2*tf) = ${designResult.buckling.HEA.flangeRatio} <= ${designResult.buckling.HEA.flangeLimit} ${designResult.buckling.HEA.flangeCheck ? '✓' : '✗'}\n` : '') +
+                (designResult.HEB ? `\nHEB ${designResult.HEB[0]}:\n` +
+                `  Narinlik Oranı (KL/r) = ${designResult.buckling.HEB.KL_ry}\n` +
+                `  Global Burkulma Emniyet Faktörü = ${designResult.buckling.HEB.bucklingSafety} ${Number(designResult.buckling.HEB.bucklingSafety) >= 1.0 ? '✓' : '✗'}\n` +
+                `  Gövde Yerel Burkulma Kontrolü: h/tw = ${designResult.buckling.HEB.webRatio} <= ${designResult.buckling.HEB.webLimit} ${designResult.buckling.HEB.webCheck ? '✓' : '✗'}\n` +
+                `  Başlık Yerel Burkulma Kontrolü: b/(2*tf) = ${designResult.buckling.HEB.flangeRatio} <= ${designResult.buckling.HEB.flangeLimit} ${designResult.buckling.HEB.flangeCheck ? '✓' : '✗'}\n` : '') +
+                (designResult.HEM ? `\nHEM ${designResult.HEM[0]}:\n` +
+                `  Narinlik Oranı (KL/r) = ${designResult.buckling.HEM.KL_ry}\n` +
+                `  Global Burkulma Emniyet Faktörü = ${designResult.buckling.HEM.bucklingSafety} ${Number(designResult.buckling.HEM.bucklingSafety) >= 1.0 ? '✓' : '✗'}\n` +
+                `  Gövde Yerel Burkulma Kontrolü: h/tw = ${designResult.buckling.HEM.webRatio} <= ${designResult.buckling.HEM.webLimit} ${designResult.buckling.HEM.webCheck ? '✓' : '✗'}\n` +
+                `  Başlık Yerel Burkulma Kontrolü: b/(2*tf) = ${designResult.buckling.HEM.flangeRatio} <= ${designResult.buckling.HEM.flangeLimit} ${designResult.buckling.HEM.flangeCheck ? '✓' : '✗'}\n` : '');
             
             resultLabel.textContent = results;
               // Burkulma bilgilerini kesit dizilerine ekle
-            if (sectionResult.IPE && sectionResult.buckling.IPE) {
-                sectionResult.IPE[8] = sectionResult.buckling.IPE;
+            if (designResult.IPE && designResult.buckling.IPE) {
+                designResult.IPE[8] = designResult.buckling.IPE;
             }
-            if (sectionResult.HEA && sectionResult.buckling.HEA) {
-                sectionResult.HEA[8] = sectionResult.buckling.HEA;
+            if (designResult.HEA && designResult.buckling.HEA) {
+                designResult.HEA[8] = designResult.buckling.HEA;
             }
-            if (sectionResult.HEB && sectionResult.buckling.HEB) {
-                sectionResult.HEB[8] = sectionResult.buckling.HEB;
+            if (designResult.HEB && designResult.buckling.HEB) {
+                designResult.HEB[8] = designResult.buckling.HEB;
             }
-            if (sectionResult.HEM && sectionResult.buckling.HEM) {
-                sectionResult.HEM[8] = sectionResult.buckling.HEM;
+            if (designResult.HEM && designResult.buckling.HEM) {
+                designResult.HEM[8] = designResult.buckling.HEM;
             }
             
             // Seçilen kesitlerin görsel gösterimi
@@ -762,16 +870,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="section-title-main">Seçilen Kesit Profilleri</div>
                 <div class="sections-grid">
                     <div class="section-column">
-                        ${drawSection(sectionResult.IPE, "IPE")}
+                        ${drawSection(designResult.IPE, "IPE")}
                     </div>
                     <div class="section-column">
-                        ${drawSection(sectionResult.HEA, "HEA")}
+                        ${drawSection(designResult.HEA, "HEA")}
                     </div>
                     <div class="section-column">
-                        ${drawSection(sectionResult.HEB, "HEB")}
+                        ${drawSection(designResult.HEB, "HEB")}
                     </div>
                     <div class="section-column">
-                        ${drawSection(sectionResult.HEM, "HEM")}
+                        ${drawSection(designResult.HEM, "HEM")}
                     </div>
                 </div>
             `;
@@ -806,4 +914,43 @@ document.addEventListener('DOMContentLoaded', function() {
         if (forceDiagram) forceDiagram.innerHTML = drawForceDiagram();
         if (beamDiagram) beamDiagram.innerHTML = drawBeamDiagram(defaults);
     }
+    
+    // Calculate required stiffener spacing according to AISC J10
+function calculateStiffenerSpacing(section, moment, L) {
+    const h = section[1] / 10; // mm -> cm
+    const tw = section[3] / 10; // mm -> cm
+    const tf = section[4] / 10; // mm -> cm
+    const E = 21000; // kN/cm²
+    const fy = 27.5;  // kN/cm² (converted from 275 MPa)
+    
+    // Clear web height
+    const h_clear = h - 2 * tf;
+    
+    // Maximum allowable spacing per AISC J10.4
+    const max_spacing_shear = 1.5 * h_clear;
+    const max_spacing_moment = 3.0 * h_clear;
+    
+    // Required spacing based on web slenderness
+    const h_tw_ratio = h_clear / tw;
+    const lambda_w = 1.49 * Math.sqrt(E / fy);
+    
+    // Calculate required spacing based on loading
+    let required_spacing;
+    if (h_tw_ratio > lambda_w) {
+        // Web is slender, needs closer spacing
+        required_spacing = Math.min(max_spacing_shear, 2 * h_clear);
+    } else {
+        // Web is non-slender
+        required_spacing = Math.min(max_spacing_moment, 3 * h_clear);
+    }
+    
+    return {
+        spacing: required_spacing,
+        originalWebRatio: h_tw_ratio,
+        modifiedWebRatio: h_tw_ratio * Math.sqrt(required_spacing / h_clear), // Effective ratio with stiffeners
+        maxSpacingShear: max_spacing_shear,
+        maxSpacingMoment: max_spacing_moment,
+        needsStiffeners: h_tw_ratio > lambda_w
+    };
+}
 });

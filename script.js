@@ -99,8 +99,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Hesapla düğmesine tıklama olayı ekle
     calculateBtn.addEventListener('click', hesaplaWeb);
-    
-    // Varsayılan değerler düğmesine tıklama olayı ekle
+      // Varsayılan değerler düğmesine tıklama olayı ekle
     defaultBtn.addEventListener('click', setDefaultValues);
     
     // Şematik diyagramları oluşturan fonksiyonlar
@@ -108,7 +107,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const { Lc, ah, wc, wcb, wcap } = params;
         
         const width = 600;
-        const height = 300;
+        const height = 400; // Daha fazla arttırılmış yükseklik
         const scale = width / (Lc * 1.2); // Ölçek faktörü
         
         // SVG oluştur
@@ -154,13 +153,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 <!-- Yük gösterimi -->
                 <rect x="${20 + ah * scale - 20}" y="${height - 140}" width="40" height="30" fill="#f39c12" stroke="#e67e22" stroke-width="2" />
                 <text x="${20 + ah * scale}" y="${height - 125}" class="text-label" text-anchor="middle" fill="white" font-weight="bold">Wcb+Wcap</text>
-                <text x="${20 + ah * scale}" y="${height - 110}" class="text-label" text-anchor="middle" fill="white" font-size="10px">${wcb + wcap} kN</text>
-                
-                <!-- Kren ağırlığı gösterimi -->
+                <text x="${20 + ah * scale}" y="${height - 110}" class="text-label" text-anchor="middle" fill="white" font-size="10px">${wcb + wcap} kN</text>                <!-- Kren ağırlığı gösterimi -->
                 <polygon points="${(width - 100) / 2 - 30},${height - 165} ${(width - 100) / 2 + 30},${height - 165} ${(width - 100) / 2},${height - 135}" 
                          fill="#3498db" stroke="#2980b9" stroke-width="2" />
                 <text x="${(width - 100) / 2}" y="${height - 150}" class="text-label" text-anchor="middle" fill="white" font-weight="bold">Wc</text>
                 <text x="${(width - 100) / 2}" y="${height - 135}" class="text-label" text-anchor="middle" fill="white" font-size="10px">${wc} kN</text>
+                
+                <!-- Lc ölçüsü (genişlik) -->
+                <line x1="20" y1="${height - 20}" x2="${width - 140}" y2="${height - 20}" class="dimension-line" stroke="#3498db" stroke-width="2" stroke-dasharray="5,2" />
+                <line x1="20" y1="${height - 30}" x2="20" y2="${height - 10}" stroke="#3498db" stroke-width="2" />
+                <line x1="${width - 140}" y1="${height - 30}" x2="${width - 140}" y2="${height - 10}" stroke="#3498db" stroke-width="2" />
+                <text x="${(width - 100) / 2}" y="${height + 5}" class="text-label" text-anchor="middle" font-size="14" font-weight="bold" fill="#2980b9">Lc = ${Lc} m</text>
             </g>
         </svg>`;
         

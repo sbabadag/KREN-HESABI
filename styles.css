@@ -213,11 +213,13 @@ footer {
 .schematic-svg {
     width: 100%;
     height: auto;
-    aspect-ratio: 2 / 1;
+    min-height: 400px;
+    aspect-ratio: 3 / 2;
     background-color: #f9f9f9;
     border-radius: 5px;
-    overflow: hidden;
+    overflow: visible;
     margin-top: 10px;
+    margin-bottom: 30px;
     border: 1px solid #ecf0f1;
     display: flex;
     justify-content: center;

@@ -354,25 +354,61 @@ document.addEventListener('DOMContentLoaded', function() {
         // Gerekli plastik kesit modülü (cm3)
         const requiredWpl = Md / (fy * 0.9); // 0.9 güvenlik faktörü
         
-        // Her bir kesit tipi için uygun olan en küçük kesiti bul
-        const suitableIPE = IPEsections.find(section => section[7] >= requiredWpl);
-        const suitableHEA = HEAsections.find(section => section[7] >= requiredWpl);
-        const suitableHEB = HEBsections.find(section => section[7] >= requiredWpl);
-          // AISC burkulma kontrolleri
+        // Her bir kesit tipi için burkulma kontrollerini sağlayan uygun en küçük kesiti bul
+        function findSuitableSectionWithBuckling(sections, requiredWpl) {
+            for (let i = 0; i < sections.length; i++) {
+                // Önce moment kapasitesini kontrol et
+                if (sections[i][7] >= requiredWpl) {
+                    const bucklingCheck = calculateBuckling(sections[i], L, moment);
+                    // Burkulma kontrollerini kontrol et
+                    if (Number(bucklingCheck.bucklingSafety) >= 1.0 && 
+                        bucklingCheck.webCheck && 
+                        bucklingCheck.flangeCheck) {
+                        return {
+                            section: sections[i],
+                            buckling: bucklingCheck
+                        };
+                    }
+                }
+            }
+            // İlk uygun kesit burkulma kontrolünü geçemediyse bir sonraki kesiti dene
+            for (let i = 0; i < sections.length; i++) {
+                if (sections[i][7] > requiredWpl) {
+                    const bucklingCheck = calculateBuckling(sections[i], L, moment);
+                    if (Number(bucklingCheck.bucklingSafety) >= 1.0 && 
+                        bucklingCheck.webCheck && 
+                        bucklingCheck.flangeCheck) {
+                        return {
+                            section: sections[i],
+                            buckling: bucklingCheck
+                        };
+                    }
+                }
+            }
+            // Hiçbir kesit uygun değilse null döndür
+            return null;
+        }
+        
+        // Her kesit tipi için uygun kesiti bul
+        const suitableIPE = findSuitableSectionWithBuckling(IPEsections);
+        const suitableHEA = findSuitableSectionWithBuckling(HEAsections);
+        const suitableHEB = findSuitableSectionWithBuckling(HEBsections);
+        
+        // Burkulma kontrollerini bir araya topla
         const buckling = {
-            IPE: suitableIPE ? calculateBuckling(suitableIPE, L, moment) : null,
-            HEA: suitableHEA ? calculateBuckling(suitableHEA, L, moment) : null,
-            HEB: suitableHEB ? calculateBuckling(suitableHEB, L, moment) : null
+            IPE: suitableIPE ? suitableIPE.buckling : null,
+            HEA: suitableHEA ? suitableHEA.buckling : null,
+            HEB: suitableHEB ? suitableHEB.buckling : null
         };
         
         const result = {
             requiredWpl: requiredWpl.toFixed(2),
-            IPE: suitableIPE ? suitableIPE : null,
-            HEA: suitableHEA ? suitableHEA : null,
-            HEB: suitableHEB ? suitableHEB : null,
-            IPEName: suitableIPE ? suitableIPE[0] : "Uygun IPE kesit bulunamadı",
-            HEAName: suitableHEA ? suitableHEA[0] : "Uygun HEA kesit bulunamadı",
-            HEBName: suitableHEB ? suitableHEB[0] : "Uygun HEB kesit bulunamadı",
+            IPE: suitableIPE ? suitableIPE.section : null,
+            HEA: suitableHEA ? suitableHEA.section : null,
+            HEB: suitableHEB ? suitableHEB.section : null,
+            IPEName: suitableIPE ? suitableIPE.section[0] : "Uygun IPE kesit bulunamadı",
+            HEAName: suitableHEA ? suitableHEA.section[0] : "Uygun HEA kesit bulunamadı",
+            HEBName: suitableHEB ? suitableHEB.section[0] : "Uygun HEB kesit bulunamadı",
             buckling: buckling
         };
         
@@ -481,6 +517,41 @@ document.addEventListener('DOMContentLoaded', function() {
             plasticMoment: Mp.toFixed(2), // kNm
             elasticMoment: My.toFixed(2) // kNm
         };
+    }
+    
+    // Burkulma kontrollerini geçen uygun kesiti bulan fonksiyon
+    function findSuitableSectionWithBuckling(sections, requiredWpl, L, moment) {
+        for (let i = 0; i < sections.length; i++) {
+            if (sections[i][7] >= requiredWpl) {
+                const bucklingCheck = calculateBuckling(sections[i], L, moment);
+                if (Number(bucklingCheck.bucklingSafety) >= 1.0 && 
+                    bucklingCheck.webCheck && 
+                    bucklingCheck.flangeCheck) {
+                    return {
+                        section: sections[i],
+                        buckling: bucklingCheck
+                    };
+                }
+            }
+        }
+        
+        // Eğer moment kapasitesini sağlayan ilk kesit burkulma kontrollerini geçemezse,
+        // daha büyük kesitleri dene
+        for (let i = 0; i < sections.length; i++) {
+            if (sections[i][7] > requiredWpl) {
+                const bucklingCheck = calculateBuckling(sections[i], L, moment);
+                if (Number(bucklingCheck.bucklingSafety) >= 1.0 && 
+                    bucklingCheck.webCheck && 
+                    bucklingCheck.flangeCheck) {
+                    return {
+                        section: sections[i],
+                        buckling: bucklingCheck
+                    };
+                }
+            }
+        }
+        
+        return null;
     }
     
     // Kesit çizimini oluşturan fonksiyon
@@ -631,12 +702,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 `MMajor3max = ${MMajor3max.toFixed(2)} kNm\n` +
                 `V3Majormax = ${V3Majormax.toFixed(2)} kN\n` +
                 `MMinor1 = ${MMinor1.toFixed(2)} kNm\nMMinor2 = ${MMinor2.toFixed(2)} kNm\n` +
-                `MMinor2max = ${MMinor2max.toFixed(2)} kNm\n\n` +
-                `--- KESİT TASARIMI (S275 Çeliği) ---\n` +
+                `MMinor2max = ${MMinor2max.toFixed(2)} kNm\n\n` +                `--- KESİT TASARIMI (S275 Çeliği) ---\n` +
                 `Gerekli Plastik Kesit Modülü = ${sectionResult.requiredWpl} cm³\n` +
-                `Önerilen IPE Kesiti: ${sectionResult.IPEName}\n` +
-                `Önerilen HEA Kesiti: ${sectionResult.HEAName}\n` +
-                `Önerilen HEB Kesiti: ${sectionResult.HEBName}\n\n` +
+                `Seçilen IPE Kesiti: ${sectionResult.IPEName} ${sectionResult.IPE && sectionResult.buckling.IPE.bucklingSafety >= 1.0 ? '(Burkulma kontrolü ✓)' : '(Burkulma kontrolü başarısız)'}\n` +
+                `Seçilen HEA Kesiti: ${sectionResult.HEAName} ${sectionResult.HEA && sectionResult.buckling.HEA.bucklingSafety >= 1.0 ? '(Burkulma kontrolü ✓)' : '(Burkulma kontrolü başarısız)'}\n` +
+                `Seçilen HEB Kesiti: ${sectionResult.HEBName} ${sectionResult.HEB && sectionResult.buckling.HEB.bucklingSafety >= 1.0 ? '(Burkulma kontrolü ✓)' : '(Burkulma kontrolü başarısız)'}\n\n` +
                 `--- BURKULMA KONTROLLERİ (AISC) ---\n` +
                 (sectionResult.IPE ? `IPE ${sectionResult.IPE[0]}:\n` +
                 `  Narinlik Oranı (KL/r) = ${sectionResult.buckling.IPE.KL_ry}\n` +

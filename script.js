@@ -347,54 +347,18 @@ document.addEventListener('DOMContentLoaded', function() {
     drawInitialSchemes();
       // Kesit seçimi yapan fonksiyon
     function sectionDesign(moment, L) {
-        // moment kNm cinsinden, kesit tablosundaki değerler cm3 cinsinden
-        // Çevirme faktörü: 1 kNm = 100000 Nmm = 100 Ncm
-        const Md = moment * 100; // kNm'yi Ncm'ye çevir
+        // Moment conversion: kNm -> Ncm
+        const moment_Ncm = moment * 100000; // 1 kNm = 100000 Nmm = 100000/10 Ncm
         
-        // Gerekli plastik kesit modülü (cm3)
-        const requiredWpl = Md / (fy * 0.9); // 0.9 güvenlik faktörü
+        // Required plastic section modulus (cm³)
+        const requiredWpl = (moment_Ncm / 10) / (fy * 0.9); // Divide by 10 to convert Ncm to kNcm
         
-        // Her bir kesit tipi için burkulma kontrollerini sağlayan uygun en küçük kesiti bul
-        function findSuitableSectionWithBuckling(sections, requiredWpl) {
-            for (let i = 0; i < sections.length; i++) {
-                // Önce moment kapasitesini kontrol et
-                if (sections[i][7] >= requiredWpl) {
-                    const bucklingCheck = calculateBuckling(sections[i], L, moment);
-                    // Burkulma kontrollerini kontrol et
-                    if (Number(bucklingCheck.bucklingSafety) >= 1.0 && 
-                        bucklingCheck.webCheck && 
-                        bucklingCheck.flangeCheck) {
-                        return {
-                            section: sections[i],
-                            buckling: bucklingCheck
-                        };
-                    }
-                }
-            }
-            // İlk uygun kesit burkulma kontrolünü geçemediyse bir sonraki kesiti dene
-            for (let i = 0; i < sections.length; i++) {
-                if (sections[i][7] > requiredWpl) {
-                    const bucklingCheck = calculateBuckling(sections[i], L, moment);
-                    if (Number(bucklingCheck.bucklingSafety) >= 1.0 && 
-                        bucklingCheck.webCheck && 
-                        bucklingCheck.flangeCheck) {
-                        return {
-                            section: sections[i],
-                            buckling: bucklingCheck
-                        };
-                    }
-                }
-            }
-            // Hiçbir kesit uygun değilse null döndür
-            return null;
-        }
+        // Find suitable section for each profile type
+        const suitableIPE = findSuitableSectionWithBuckling(IPEsections, requiredWpl, L, moment);
+        const suitableHEA = findSuitableSectionWithBuckling(HEAsections, requiredWpl, L, moment);
+        const suitableHEB = findSuitableSectionWithBuckling(HEBsections, requiredWpl, L, moment);
         
-        // Her kesit tipi için uygun kesiti bul
-        const suitableIPE = findSuitableSectionWithBuckling(IPEsections);
-        const suitableHEA = findSuitableSectionWithBuckling(HEAsections);
-        const suitableHEB = findSuitableSectionWithBuckling(HEBsections);
-        
-        // Burkulma kontrollerini bir araya topla
+        // Collect buckling checks
         const buckling = {
             IPE: suitableIPE ? suitableIPE.buckling : null,
             HEA: suitableHEA ? suitableHEA.buckling : null,
@@ -529,27 +493,47 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Burkulma kontrollerini geçen uygun kesiti bulan fonksiyon
     function findSuitableSectionWithBuckling(sections, requiredWpl, L, moment) {
-        // Sort sections by increasing plastic section modulus for efficiency
-        const sortedSections = sections.slice().sort((a, b) => a[7] - b[7]);
+        // First try with sections that meet the basic moment requirement
+        for (let i = 0; i < sections.length; i++) {
+            const section = sections[i];
+            
+            // Check if section meets minimum moment capacity
+            if (section[7] >= requiredWpl) {
+                const bucklingCheck = calculateBuckling(section, L, moment);
+                
+                // Check all safety criteria
+                if (Number(bucklingCheck.bucklingSafety) >= 1.0 && 
+                    bucklingCheck.webCheck && 
+                    bucklingCheck.flangeCheck &&
+                    Number(bucklingCheck.momentSafety) >= 1.0) {
+                    
+                    return {
+                        section: section,
+                        buckling: bucklingCheck
+                    };
+                }
+            }
+        }
         
-        for (let i = 0; i < sortedSections.length; i++) {
-            const section = sortedSections[i];
+        // If no section passed all checks, try with larger sections
+        for (let i = 0; i < sections.length; i++) {
+            const section = sections[i];
             
-            // Skip sections that don't meet the basic moment capacity requirement
-            if (section[7] < requiredWpl) continue;
-            
-            const bucklingCheck = calculateBuckling(section, L, moment);
-            
-            // Check all safety criteria
-            const isGlobalSafe = Number(bucklingCheck.bucklingSafety) >= 1.0;
-            const isLocalSafe = bucklingCheck.webCheck && bucklingCheck.flangeCheck;
-            const isMomentSafe = Number(bucklingCheck.momentSafety) >= 1.0;
-            
-            if (isGlobalSafe && isLocalSafe && isMomentSafe) {
-                return {
-                    section: section,
-                    buckling: bucklingCheck
-                };
+            // Only check sections larger than required
+            if (section[7] > requiredWpl * 1.2) { // Try 20% larger sections
+                const bucklingCheck = calculateBuckling(section, L, moment);
+                
+                // Check all safety criteria
+                if (Number(bucklingCheck.bucklingSafety) >= 1.0 && 
+                    bucklingCheck.webCheck && 
+                    bucklingCheck.flangeCheck &&
+                    Number(bucklingCheck.momentSafety) >= 1.0) {
+                    
+                    return {
+                        section: section,
+                        buckling: bucklingCheck
+                    };
+                }
             }
         }
         

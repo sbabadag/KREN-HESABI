@@ -83,6 +83,29 @@ document.addEventListener('DOMContentLoaded', function() {
         ["HEB 600", 600, 300, 15.5, 30.0, 171000, 5700, 6420]
     ];
     
+    // HEM kesit verileri [Ad, h (mm), b (mm), tw (mm), tf (mm), Iy (cm4), Wel,y (cm3), Wpl,y (cm3)]
+    const HEMsections = [
+        ["HEM 100", 120, 106, 12.0, 20.0, 1143, 190, 235],
+        ["HEM 120", 140, 126, 12.5, 21.0, 2018, 288, 350],
+        ["HEM 140", 160, 146, 13.0, 22.0, 3291, 411, 493],
+        ["HEM 160", 180, 166, 14.0, 23.0, 5098, 567, 674],
+        ["HEM 180", 200, 186, 14.5, 24.0, 7483, 748, 883],
+        ["HEM 200", 220, 206, 15.0, 25.0, 10640, 967, 1135],
+        ["HEM 220", 240, 226, 15.5, 26.0, 14600, 1217, 1419],
+        ["HEM 240", 270, 248, 18.0, 32.0, 24290, 1800, 2117],
+        ["HEM 260", 290, 268, 18.0, 32.5, 31310, 2160, 2524],
+        ["HEM 280", 310, 288, 18.5, 33.0, 39550, 2551, 2966],
+        ["HEM 300", 340, 310, 21.0, 39.0, 59200, 3482, 4078],
+        ["HEM 320", 359, 309, 21.0, 40.0, 68130, 3796, 4435],
+        ["HEM 340", 377, 309, 21.0, 40.0, 76370, 4052, 4718],
+        ["HEM 360", 395, 308, 21.0, 40.0, 84870, 4297, 4988],
+        ["HEM 400", 432, 307, 21.0, 40.0, 104100, 4820, 5571],
+        ["HEM 450", 478, 307, 21.0, 40.0, 131500, 5501, 6331],
+        ["HEM 500", 524, 306, 21.0, 40.0, 161900, 6180, 7094],
+        ["HEM 550", 572, 306, 21.0, 40.0, 198000, 6920, 7934],
+        ["HEM 600", 620, 305, 21.0, 40.0, 237400, 7660, 8772]
+    ];
+    
     // Çelik mukavemet parametreleri - S275 çeliği için
     const fy = 275; // Akma dayanımı, MPa (N/mm²)
     
@@ -360,12 +383,14 @@ document.addEventListener('DOMContentLoaded', function() {
         const suitableIPE = findSuitableSectionWithBuckling(IPEsections, requiredWpl, L, moment);
         const suitableHEA = findSuitableSectionWithBuckling(HEAsections, requiredWpl, L, moment);
         const suitableHEB = findSuitableSectionWithBuckling(HEBsections, requiredWpl, L, moment);
+        const suitableHEM = findSuitableSectionWithBuckling(HEMsections, requiredWpl, L, moment);
         
         // Collect buckling checks
         const buckling = {
             IPE: suitableIPE ? suitableIPE.buckling : null,
             HEA: suitableHEA ? suitableHEA.buckling : null,
-            HEB: suitableHEB ? suitableHEB.buckling : null
+            HEB: suitableHEB ? suitableHEB.buckling : null,
+            HEM: suitableHEM ? suitableHEM.buckling : null
         };
         
         const result = {
@@ -373,9 +398,11 @@ document.addEventListener('DOMContentLoaded', function() {
             IPE: suitableIPE ? suitableIPE.section : null,
             HEA: suitableHEA ? suitableHEA.section : null,
             HEB: suitableHEB ? suitableHEB.section : null,
+            HEM: suitableHEM ? suitableHEM.section : null,
             IPEName: suitableIPE ? suitableIPE.section[0] : "Uygun IPE kesit bulunamadı",
             HEAName: suitableHEA ? suitableHEA.section[0] : "Uygun HEA kesit bulunamadı",
             HEBName: suitableHEB ? suitableHEB.section[0] : "Uygun HEB kesit bulunamadı",
+            HEMName: suitableHEM ? suitableHEM.section[0] : "Uygun HEM kesit bulunamadı",
             buckling: buckling
         };
         
@@ -691,7 +718,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 `Gerekli Plastik Kesit Modülü = ${sectionResult.requiredWpl} cm³\n` +
                 `Seçilen IPE Kesiti: ${sectionResult.IPEName} ${sectionResult.IPE && sectionResult.buckling.IPE.bucklingSafety >= 1.0 ? '(Burkulma kontrolü ✓)' : '(Burkulma kontrolü başarısız)'}\n` +
                 `Seçilen HEA Kesiti: ${sectionResult.HEAName} ${sectionResult.HEA && sectionResult.buckling.HEA.bucklingSafety >= 1.0 ? '(Burkulma kontrolü ✓)' : '(Burkulma kontrolü başarısız)'}\n` +
-                `Seçilen HEB Kesiti: ${sectionResult.HEBName} ${sectionResult.HEB && sectionResult.buckling.HEB.bucklingSafety >= 1.0 ? '(Burkulma kontrolü ✓)' : '(Burkulma kontrolü başarısız)'}\n\n` +
+                `Seçilen HEB Kesiti: ${sectionResult.HEBName} ${sectionResult.HEB && sectionResult.buckling.HEB.bucklingSafety >= 1.0 ? '(Burkulma kontrolü ✓)' : '(Burkulma kontrolü başarısız)'}\n` +
+                `Seçilen HEM Kesiti: ${sectionResult.HEMName} ${sectionResult.HEM && sectionResult.buckling.HEM.bucklingSafety >= 1.0 ? '(Burkulma kontrolü ✓)' : '(Burkulma kontrolü başarısız)'}\n\n` +
                 `--- BURKULMA KONTROLLERİ (AISC) ---\n` +
                 (sectionResult.IPE ? `IPE ${sectionResult.IPE[0]}:\n` +
                 `  Narinlik Oranı (KL/r) = ${sectionResult.buckling.IPE.KL_ry}\n` +
@@ -707,7 +735,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 `  Narinlik Oranı (KL/r) = ${sectionResult.buckling.HEB.KL_ry}\n` +
                 `  Global Burkulma Emniyet Faktörü = ${sectionResult.buckling.HEB.bucklingSafety} ${Number(sectionResult.buckling.HEB.bucklingSafety) >= 1.0 ? '✓' : '✗'}\n` +
                 `  Gövde Yerel Burkulma Kontrolü: h/tw = ${sectionResult.buckling.HEB.webRatio} <= ${sectionResult.buckling.HEB.webLimit} ${sectionResult.buckling.HEB.webCheck ? '✓' : '✗'}\n` +
-                `  Başlık Yerel Burkulma Kontrolü: b/(2*tf) = ${sectionResult.buckling.HEB.flangeRatio} <= ${sectionResult.buckling.HEB.flangeLimit} ${sectionResult.buckling.HEB.flangeCheck ? '✓' : '✗'}\n` : '');
+                `  Başlık Yerel Burkulma Kontrolü: b/(2*tf) = ${sectionResult.buckling.HEB.flangeRatio} <= ${sectionResult.buckling.HEB.flangeLimit} ${sectionResult.buckling.HEB.flangeCheck ? '✓' : '✗'}\n` : '') +
+                (sectionResult.HEM ? `\nHEM ${sectionResult.HEM[0]}:\n` +
+                `  Narinlik Oranı (KL/r) = ${sectionResult.buckling.HEM.KL_ry}\n` +
+                `  Global Burkulma Emniyet Faktörü = ${sectionResult.buckling.HEM.bucklingSafety} ${Number(sectionResult.buckling.HEM.bucklingSafety) >= 1.0 ? '✓' : '✗'}\n` +
+                `  Gövde Yerel Burkulma Kontrolü: h/tw = ${sectionResult.buckling.HEM.webRatio} <= ${sectionResult.buckling.HEM.webLimit} ${sectionResult.buckling.HEM.webCheck ? '✓' : '✗'}\n` +
+                `  Başlık Yerel Burkulma Kontrolü: b/(2*tf) = ${sectionResult.buckling.HEM.flangeRatio} <= ${sectionResult.buckling.HEM.flangeLimit} ${sectionResult.buckling.HEM.flangeCheck ? '✓' : '✗'}\n` : '');
             
             resultLabel.textContent = results;
               // Burkulma bilgilerini kesit dizilerine ekle
@@ -719,6 +752,9 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             if (sectionResult.HEB && sectionResult.buckling.HEB) {
                 sectionResult.HEB[8] = sectionResult.buckling.HEB;
+            }
+            if (sectionResult.HEM && sectionResult.buckling.HEM) {
+                sectionResult.HEM[8] = sectionResult.buckling.HEM;
             }
             
             // Seçilen kesitlerin görsel gösterimi
@@ -733,6 +769,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                     <div class="section-column">
                         ${drawSection(sectionResult.HEB, "HEB")}
+                    </div>
+                    <div class="section-column">
+                        ${drawSection(sectionResult.HEM, "HEM")}
                     </div>
                 </div>
             `;

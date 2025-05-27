@@ -819,9 +819,12 @@ document.addEventListener('DOMContentLoaded', function() {
             const detailsDiv = document.createElement('div');
             detailsDiv.className = 'section-details';
             
+            // Get LTB status
+            const ltbStatus = getLTBStatus(buckling);
+            
             let stiffenerText = '';
             if (buckling.stiffenerInfo && buckling.stiffenerInfo.needsStiffeners) {
-                const spacing = (buckling.stiffenerInfo.spacing / 100).toFixed(2); // convert to meters
+                const spacing = (buckling.stiffenerInfo.spacing / 100).toFixed(2);
                 stiffenerText = `
                     <div class="stiffener-info">
                         <p><strong>Gövde Berkitme Gerekli ✓</strong></p>
@@ -835,6 +838,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 <p>Gövde Narinliği: ${buckling.webRatio} / ${buckling.webLimit} ${buckling.webCheck ? '✓' : '✗'}</p>
                 <p>Başlık Narinliği: ${buckling.flangeRatio} / ${buckling.flangeLimit} ${buckling.flangeCheck ? '✓' : '✗'}</p>
                 <p>Moment Güvenliği: ${buckling.momentSafety} ${Number(buckling.momentSafety) >= 1.0 ? '✓' : '✗'}</p>
+                <div class="ltb-info">
+                    <p><strong>Yanal Burulmalı Burkulma (LTB):</strong></p>
+                    <p>Durum: ${ltbStatus.status}</p>
+                    <p>Mp = ${buckling.plasticMoment} kNm</p>
+                    <p>Mn = ${buckling.bucklingMoment} kNm</p>
+                </div>
                 ${stiffenerText}
             `;
             
@@ -842,5 +851,27 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         return sectionDiv;
+    }
+
+    function getLTBStatus(buckling) {
+        const Mn = Number(buckling.bucklingMoment);
+        const Mp = Number(buckling.plasticMoment);
+        
+        if (Mn === Mp) {
+            return {
+                status: "Plastik Bölge - LTB Yok ✓",
+                ratio: 1
+            };
+        } else if (Mn >= 0.7 * Mp) {
+            return {
+                status: "İnelastik LTB Bölgesi ⚠️",
+                ratio: Mn / Mp
+            };
+        } else {
+            return {
+                status: "Elastik LTB Bölgesi ⚠️",
+                ratio: Mn / Mp
+            };
+        }
     }
 });

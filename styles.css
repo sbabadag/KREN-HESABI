@@ -440,6 +440,24 @@ footer {
     color: #2980b9;
 }
 
+/* LTB bilgileri için stiller */
+.ltb-info {
+    margin-top: 10px;
+    padding: 10px;
+    background-color: #fff3e6;
+    border-left: 4px solid #e67e22;
+    border-radius: 4px;
+}
+
+.ltb-info p {
+    margin: 5px 0;
+    color: #2c3e50;
+}
+
+.ltb-info strong {
+    color: #d35400;
+}
+
 /* Mobil görünüm için responsive ayarlar */
 @media (max-width: 768px) {
     .container {

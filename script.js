@@ -271,16 +271,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 <rect x="${L * scale - 5}" y="62" width="10" height="25" fill="#34495e" />
                 <rect x="${L * scale - 15}" y="87" width="30" height="8" fill="#34495e" />
                 <text x="${L * scale}" y="110" class="text-label" text-anchor="middle" font-weight="bold">1</text>
-                
-                <!-- Tekerlekler ve aw mesafesi -->
-                <line x1="${(L * scale - aw * scale) / 2}" y1="50" x2="${(L * scale - aw * scale) / 2}" y2="15" class="force-arrow" stroke="#e74c3c" stroke-width="2" marker-end="url(#arrow2)" />
-                <line x1="${(L * scale + aw * scale) / 2}" y1="50" x2="${(L * scale + aw * scale) / 2}" y2="15" class="force-arrow" stroke="#e74c3c" stroke-width="2" marker-end="url(#arrow2)" />
+                  <!-- Tekerlekler ve aw mesafesi -->
+                <line x1="${(L * scale - aw * scale) / 2}" y1="50" x2="${(L * scale - aw * scale) / 2}" y2="85" class="force-arrow" stroke="#e74c3c" stroke-width="2" marker-end="url(#arrow2)" />
+                <line x1="${(L * scale + aw * scale) / 2}" y1="50" x2="${(L * scale + aw * scale) / 2}" y2="85" class="force-arrow" stroke="#e74c3c" stroke-width="2" marker-end="url(#arrow2)" />
                   <!-- Kuvvet değerleri -->
-                <text x="${(L * scale - aw * scale) / 2 - 40}" y="35" class="text-label" font-weight="bold" text-anchor="end">WvA</text>
-                <text x="${(L * scale - aw * scale) / 2 - 40}" y="47" class="text-label" font-size="10px" text-anchor="end">${WvA_t ? WvA_t.toFixed(2) + ' kN' : 'WvA'}</text>
+                <text x="${(L * scale - aw * scale) / 2 - 40}" y="70" class="text-label" font-weight="bold" text-anchor="end">WvA</text>
+                <text x="${(L * scale - aw * scale) / 2 - 40}" y="82" class="text-label" font-size="10px" text-anchor="end">${WvA_t ? WvA_t.toFixed(2) + ' kN' : 'WvA'}</text>
                 
-                <text x="${(L * scale + aw * scale) / 2 + 40}" y="35" class="text-label" font-weight="bold" text-anchor="start">WvA</text>
-                <text x="${(L * scale + aw * scale) / 2 + 40}" y="47" class="text-label" font-size="10px" text-anchor="start">${WvA_t ? WvA_t.toFixed(2) + ' kN' : 'WvA'}</text>
+                <text x="${(L * scale + aw * scale) / 2 + 40}" y="70" class="text-label" font-weight="bold" text-anchor="start">WvA</text>
+                <text x="${(L * scale + aw * scale) / 2 + 40}" y="82" class="text-label" font-size="10px" text-anchor="start">${WvA_t ? WvA_t.toFixed(2) + ' kN' : 'WvA'}</text>
                 
                 <!-- aw ölçüsü -->
                 <line x1="${(L * scale - aw * scale) / 2}" y1="65" x2="${(L * scale + aw * scale) / 2}" y2="65" class="dimension-line" stroke="#3498db" stroke-width="1" stroke-dasharray="5,2" />

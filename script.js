@@ -874,4 +874,137 @@ document.addEventListener('DOMContentLoaded', function() {
             };
         }
     }
+    
+    // Vinç kapasite ve ağırlık verileri [Kapasite (ton), Açıklık (m), Vinç Ağırlığı (kg), Kedi Ağırlığı (kg)]
+    const craneData = [
+        [2, 10, 4500, 500],
+        [2, 20, 5700, 500],
+        [5, 10, 6800, 800],
+        [5, 20, 8900, 800],
+        [10, 10, 9200, 1000],
+        [10, 20, 12000, 1200],
+        [16, 20, 14500, 1500],
+        [20, 20, 18000, 1700],
+        [25, 25, 23000, 2500],
+        [32, 25, 28000, 3200],
+        [40, 25, 33000, 4000],
+        [50, 30, 42000, 5500],
+        [63, 30, 50000, 6000],
+        [80, 35, 62000, 8500],
+        [100, 40, 78000, 11000]
+    ];
+
+    // Interpolasyon yardımcı fonksiyonu
+    function interpolate(x, x1, x2, y1, y2) {
+        if (x1 === x2) return y1;
+        return y1 + (x - x1) * (y2 - y1) / (x2 - x1);
+    }
+
+    // Kapasiteye ve açıklığa göre en yakın 4 noktayı bulan fonksiyon
+    function findNearestPoints(capacity, span) {
+        let capacityPoints = [...new Set(craneData.map(data => data[0]))].sort((a, b) => a - b);
+        let spanPoints = [...new Set(craneData.map(data => data[1]))].sort((a, b) => a - b);
+
+        // En yakın kapasite değerlerini bul
+        let lowerCap = capacityPoints.filter(cap => cap <= capacity).slice(-1)[0] || capacityPoints[0];
+        let upperCap = capacityPoints.filter(cap => cap >= capacity)[0] || capacityPoints[capacityPoints.length - 1];
+
+        // En yakın açıklık değerlerini bul
+        let lowerSpan = spanPoints.filter(sp => sp <= span).slice(-1)[0] || spanPoints[0];
+        let upperSpan = spanPoints.filter(sp => sp >= span)[0] || spanPoints[spanPoints.length - 1];
+
+        return {
+            capacities: [lowerCap, upperCap],
+            spans: [lowerSpan, upperSpan]
+        };
+    }
+
+    // Kapasite ve açıklığa göre vinç ağırlıklarını interpolasyon ile bulan fonksiyon
+    function findCraneWeights(capacity, span) {
+        const nearest = findNearestPoints(capacity, span);
+        
+        // Her köşe noktası için değerleri bul
+        let cornerPoints = [];
+        for (let cap of nearest.capacities) {
+            for (let sp of nearest.spans) {
+                const point = craneData.find(data => data[0] === cap && data[1] === sp);
+                if (point) {
+                    cornerPoints.push({
+                        capacity: point[0],
+                        span: point[1],
+                        craneWeight: point[2],
+                        trolleyWeight: point[3]
+                    });
+                }
+            }
+        }
+
+        if (cornerPoints.length === 0) {
+            return {
+                craneWeight: craneData[0][2] / 100,
+                trolleyWeight: craneData[0][3] / 100
+            };
+        }
+
+        if (cornerPoints.length === 1) {
+            return {
+                craneWeight: cornerPoints[0].craneWeight / 100,
+                trolleyWeight: cornerPoints[0].trolleyWeight / 100
+            };
+        }
+
+        // Önce kapasite yönünde interpolasyon
+        let interpolatedPoints = [];
+        for (let sp of nearest.spans) {
+            let points = cornerPoints.filter(p => p.span === sp);
+            if (points.length === 2) {
+                interpolatedPoints.push({
+                    span: sp,
+                    craneWeight: interpolate(capacity, points[0].capacity, points[1].capacity,
+                                          points[0].craneWeight, points[1].craneWeight),
+                    trolleyWeight: interpolate(capacity, points[0].capacity, points[1].capacity,
+                                            points[0].trolleyWeight, points[1].trolleyWeight)
+                });
+            } else if (points.length === 1) {
+                interpolatedPoints.push({
+                    span: sp,
+                    craneWeight: points[0].craneWeight,
+                    trolleyWeight: points[0].trolleyWeight
+                });
+            }
+        }
+
+        // Sonra açıklık yönünde interpolasyon
+        if (interpolatedPoints.length === 2) {
+            return {
+                craneWeight: interpolate(span, interpolatedPoints[0].span, interpolatedPoints[1].span,
+                                      interpolatedPoints[0].craneWeight, interpolatedPoints[1].craneWeight) / 100,
+                trolleyWeight: interpolate(span, interpolatedPoints[0].span, interpolatedPoints[1].span,
+                                        interpolatedPoints[0].trolleyWeight, interpolatedPoints[1].trolleyWeight) / 100
+            };
+        }
+
+        // Tek nokta kaldıysa onu kullan
+        return {
+            craneWeight: interpolatedPoints[0].craneWeight / 100,
+            trolleyWeight: interpolatedPoints[0].trolleyWeight / 100
+        };
+    }
+
+    // Inputs güncelleme fonksiyonu
+    function updateWeights() {
+        const capacity = parseFloat(document.getElementById('wcap').value) / 10; // kN'dan tona çevir
+        const span = parseFloat(document.getElementById('Lc').value);
+        
+        if (isNaN(capacity) || isNaN(span) || capacity <= 0 || span <= 0) return;
+        
+        const weights = findCraneWeights(capacity, span);
+        
+        document.getElementById('wc').value = weights.craneWeight.toFixed(1);
+        document.getElementById('wcb').value = weights.trolleyWeight.toFixed(1);
+    }
+
+    // Event listeners
+    document.getElementById('wcap').addEventListener('change', updateWeights);
+    document.getElementById('Lc').addEventListener('change', updateWeights);
 });

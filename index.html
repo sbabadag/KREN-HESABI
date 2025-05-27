@@ -66,12 +66,31 @@
                 </div>
             </div>
   
-            
-            <!-- Sonuç bölümü -->
+              <!-- Sonuç bölümü -->
             <div class="result-frame">
                 <h2>Sonuçlar:</h2>
                 <pre id="result-label"></pre>
-            </div>        </div>
+            </div>
+            
+            <!-- Burkulma açıklamaları bölümü -->            <div class="info-frame">
+                <h2>Burkulma Kontrolleri Hakkında:</h2>                <div class="info-content">
+                    <p><strong>Global (Euler) Burkulma:</strong> Her iki uçta mafsallı yüklü bir kiriş için AISC'ye göre burkulma kontrolü yapılmaktadır. Emniyet faktörünün 1'den büyük olması, kesit güvenliği için gereklidir.</p>
+                    <div class="formula-box">
+                        <p class="formula-title">Euler Burkulma Formülü:</p>
+                        <p class="formula">F<sub>e</sub> = π<sup>2</sup>E / (KL/r)<sup>2</sup></p>
+                        <p class="formula-desc">E = Elastisite modülü, K = Burkulma uzunluk faktörü (= 1.0), L = Kirş uzunluğu, r = Atalet yarıçapı</p>
+                    </div>
+                    <p><strong>Yanal Burkulma Momenti:</strong> AISC yönetmeliğine göre hesaplanan maksimum moment taşıma kapasitesi, kesit ve narinlik değerlerine bağlı olarak hesaplanmaktadır.</p>
+                    <p><strong>Yerel Burkulma:</strong> Kesitlerin gövde ve başlık bölgelerinde burkulma oluşmaması için AISC narinlik limitlerinin aşılmaması gerekmektedir.</p>
+                    <ul>
+                        <li><strong>Gövde Burkulma Kontrolü:</strong> h/tw ≤ 1.49√(E/F<sub>y</sub>)</li>
+                        <li><strong>Başlık Burkulma Kontrolü:</strong> b/(2*tf) ≤ 0.56√(E/F<sub>y</sub>)</li>
+                    </ul>
+                    <p>✓ işareti güvenli, ✗ işareti güvensiz durumu belirtir.</p>
+                    <p class="info-note"><strong>Not:</strong> Bu hesaplamalar, AISC yönetmeliği esas alınarak her iki ucu mafsallı kiriş durumu için yapılmaktadır. Farklı uç koşulları için burkulma uzunluk faktörü (K) değeri değiştirilmelidir.</p>
+                </div>
+            </div>
+        </div>
           <footer>
             <p>© SEBA Dizayn Mühendislik Müşavirlik</p>
         </footer>

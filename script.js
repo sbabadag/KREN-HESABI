@@ -345,9 +345,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Sayfa yüklendiğinde şemaları çiz
     drawInitialSchemes();
-    
-    // Kesit seçimi yapan fonksiyon
-    function sectionDesign(moment) {
+      // Kesit seçimi yapan fonksiyon
+    function sectionDesign(moment, L) {
         // moment kNm cinsinden, kesit tablosundaki değerler cm3 cinsinden
         // Çevirme faktörü: 1 kNm = 100000 Nmm = 100 Ncm
         const Md = moment * 100; // kNm'yi Ncm'ye çevir
@@ -359,6 +358,12 @@ document.addEventListener('DOMContentLoaded', function() {
         const suitableIPE = IPEsections.find(section => section[7] >= requiredWpl);
         const suitableHEA = HEAsections.find(section => section[7] >= requiredWpl);
         const suitableHEB = HEBsections.find(section => section[7] >= requiredWpl);
+          // AISC burkulma kontrolleri
+        const buckling = {
+            IPE: suitableIPE ? calculateBuckling(suitableIPE, L, moment) : null,
+            HEA: suitableHEA ? calculateBuckling(suitableHEA, L, moment) : null,
+            HEB: suitableHEB ? calculateBuckling(suitableHEB, L, moment) : null
+        };
         
         const result = {
             requiredWpl: requiredWpl.toFixed(2),
@@ -367,10 +372,115 @@ document.addEventListener('DOMContentLoaded', function() {
             HEB: suitableHEB ? suitableHEB : null,
             IPEName: suitableIPE ? suitableIPE[0] : "Uygun IPE kesit bulunamadı",
             HEAName: suitableHEA ? suitableHEA[0] : "Uygun HEA kesit bulunamadı",
-            HEBName: suitableHEB ? suitableHEB[0] : "Uygun HEB kesit bulunamadı"
+            HEBName: suitableHEB ? suitableHEB[0] : "Uygun HEB kesit bulunamadı",
+            buckling: buckling
         };
         
         return result;
+    }    // AISC burkulma kontrollerini hesaplayan fonksiyon
+    function calculateBuckling(section, L, moment) {
+        // Kesit bilgilerini çıkar
+        const name = section[0];
+        const h = section[1] / 10; // mm -> cm
+        const b = section[2] / 10; // mm -> cm
+        const tw = section[3] / 10; // mm -> cm
+        const tf = section[4] / 10; // mm -> cm
+        const Iy = section[5]; // cm⁴
+        const Wely = section[6]; // cm³
+        const Wply = section[7]; // cm³
+        
+        // Kesit özellikleri hesapla
+        const A = 2 * b * tf + (h - 2 * tf) * tw; // cm²
+        
+        // Atalet momentini kesit verilerinden al
+        // Atalet yarıçapı hesapla
+        const ry = Math.sqrt(Iy / A); // cm
+        
+        // Euler (genel) burkulma kontrolü - her iki uçta mafsallı kiriş (K=1.0)
+        const L_cm = L * 100; // m -> cm
+        const KL_ry = L_cm / ry; // narinlik oranı
+        
+        // AISC'ye göre elastik burkulma gerilmesi
+        const E = 21000; // kN/cm² (elastisite modülü)
+        const Fe = Math.PI * Math.PI * E / Math.pow(KL_ry, 2); // kN/cm²
+        
+        // AISC'ye göre kritik burkulma gerilmesi
+        let Fcr;
+        if (KL_ry <= 4.71 * Math.sqrt(E / fy)) {
+            // Elastik olmayan burkulma
+            Fcr = Math.pow(0.658, (fy/Fe)) * fy; // kN/cm²
+        } else {
+            // Elastik burkulma
+            Fcr = 0.877 * Fe; // kN/cm²
+        }
+        
+        // Burkulma dayanımı
+        const Pn = Fcr * A; // kN
+        const PhiPn = 0.9 * Pn; // Güvenlik faktörü uygulanmış burkulma dayanımı
+          // AISC'ye göre kiriş burkulma momenti
+        // Kritik elastik moment (Mcr) - AISC F2.2
+        const Cb = 1.0; // Moment diyagramı düzeltme faktörü (uniform moment için)
+        
+        // AISC Table User Note F2.2
+        // I-kesit için yanal-burulmalı burkulma parametreleri
+        const Lp = 1.76 * ry * Math.sqrt(E / fy); // Plastik limit uzunluğu, cm
+        
+        // AISC Equation F2-6
+        const Lr = 1.95 * ry * Math.sqrt(E / (0.7 * fy)) * 
+                   Math.sqrt(1 / Math.sqrt(1 + Math.sqrt(1 + 6.76 * Math.pow(0.7 * fy / E, 2)))); // cm
+        
+        const Mp = Wply * fy / 1000; // Plastik moment kapasitesi kNm
+        const My = Wely * fy / 1000; // Elastik moment kapasitesi kNm
+        
+        // AISC F2.2'ye göre yanal burkulma momenti hesapla - Formül F2-1 ila F2-3
+        let Mn;
+        if (L_cm <= Lp) {
+            // Plastik bölgede (F2-1)
+            Mn = Mp;
+        } else if (L_cm <= Lr) {
+            // Elastik olmayan bölgede (F2-2)
+            Mn = Cb * (Mp - (Mp - 0.7 * My) * ((L_cm - Lp) / (Lr - Lp)));
+        } else {
+            // Elastik bölgede (F2-3)
+            const Fcr = (Cb * Math.PI * Math.PI * E) / Math.pow(L_cm / ry, 2);
+            Mn = Fcr * Wely / 1000; // kNm
+            // AISC F2.2'ye göre sınırlandırma
+            Mn = Math.min(Mn, Mp);
+        }
+        
+        const PhiMn = 0.9 * Mn; // Güvenlik faktörlü yanal burkulma momenti
+        
+        // Yerel burkulma kontrolleri
+        
+        // Gövde için AISC narinlik limiti (basınç elemanı)
+        const h_tw = (h - 2 * tf) / tw;
+        const lambda_w = 1.49 * Math.sqrt(E / fy);
+        const webCheck = h_tw <= lambda_w;
+        
+        // Başlık (flanş) için AISC narinlik limiti
+        const b_tf = (b / 2) / tf; // yarı başlık genişliği / başlık kalınlığı
+        const lambda_f = 0.56 * Math.sqrt(E / fy);
+        const flangeCheck = b_tf <= lambda_f;
+          // Moment taşıma kapasitesi kontrolü
+        const designMoment = PhiMn; // kNm
+        const appliedMoment = moment; // kNm
+        const globalSafetyFactor = designMoment / appliedMoment; // Tasarım momenti / uygulanan moment
+        
+        // Sonuçları döndür
+        return {
+            KL_ry: KL_ry.toFixed(2),
+            bucklingSafety: globalSafetyFactor.toFixed(2),
+            bucklingCapacity: PhiPn.toFixed(2),
+            webRatio: h_tw.toFixed(2),
+            webLimit: lambda_w.toFixed(2),
+            webCheck: webCheck,
+            flangeRatio: b_tf.toFixed(2),
+            flangeLimit: lambda_f.toFixed(2),
+            flangeCheck: flangeCheck,
+            bucklingMoment: PhiMn.toFixed(2), // kNm
+            plasticMoment: Mp.toFixed(2), // kNm
+            elasticMoment: My.toFixed(2) // kNm
+        };
     }
     
     // Kesit çizimini oluşturan fonksiyon
@@ -422,8 +532,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <line x1="${(scaledB + scaledTw) / 2 + 2}" y1="${scaledH/2}" x2="${scaledB + 10}" y2="${scaledH/2}" stroke="#7f8c8d" stroke-width="1" />
                     <text x="${scaledB + 12}" y="${scaledH/2 + 4}" font-size="8" fill="#7f8c8d">tw=${tw}mm</text>
                 </g>
-            </svg>
-            <div class="section-dimensions">
+            </svg>            <div class="section-dimensions">
                 <div class="dimension-row">
                     <span class="dimension-label">Yükseklik (h):</span>
                     <span class="dimension-value">${h} mm</span>
@@ -440,6 +549,21 @@ document.addEventListener('DOMContentLoaded', function() {
                     <span class="dimension-label">Iy:</span>
                     <span class="dimension-value">${Iy} cm⁴</span>
                 </div>
+                ${section[8] ? `
+                <div class="section-buckling-title">Burkulma Güvenliği</div>
+                <div class="dimension-row">
+                    <span class="dimension-label">Global:</span>
+                    <span class="dimension-value ${Number(section[8].bucklingSafety) >= 1.0 ? 'safe' : 'unsafe'}">${section[8].bucklingSafety} ${Number(section[8].bucklingSafety) >= 1.0 ? '✓' : '✗'}</span>
+                </div>
+                <div class="dimension-row">
+                    <span class="dimension-label">Gövde:</span>
+                    <span class="dimension-value ${section[8].webCheck ? 'safe' : 'unsafe'}">${section[8].webCheck ? 'Güvenli ✓' : 'Güvensiz ✗'}</span>
+                </div>
+                <div class="dimension-row">
+                    <span class="dimension-label">Başlık:</span>
+                    <span class="dimension-value ${section[8].flangeCheck ? 'safe' : 'unsafe'}">${section[8].flangeCheck ? 'Güvenli ✓' : 'Güvensiz ✗'}</span>
+                </div>
+                ` : ''}
             </div>
         </div>`;
         
@@ -496,11 +620,8 @@ document.addEventListener('DOMContentLoaded', function() {
             if (craneSideView) craneSideView.innerHTML = drawCraneSideView(params);
             if (forceDiagram) forceDiagram.innerHTML = drawForceDiagram(params);
             if (beamDiagram) beamDiagram.innerHTML = drawBeamDiagram(params);
-            
-            // Kesit tasarımını yap - S275 çeliği için
-            const sectionResult = sectionDesign(MMajor3max);
-
-            // Sonuçları arayüzde göster - formatı koruyarak
+              // Kesit tasarımını yap - S275 çeliği için (burkulma kontrollerini içerir)
+            const sectionResult = sectionDesign(MMajor3max, L);            // Sonuçları arayüzde göster - formatı koruyarak
             const results = 
                 `RA = ${RA.toFixed(2)} kN\nRB = ${RB.toFixed(2)} kN\n` +
                 `W'vA = ${WvA_t.toFixed(2)} kN\nW'vB = ${WvB_t.toFixed(2)} kN\n` +
@@ -515,9 +636,35 @@ document.addEventListener('DOMContentLoaded', function() {
                 `Gerekli Plastik Kesit Modülü = ${sectionResult.requiredWpl} cm³\n` +
                 `Önerilen IPE Kesiti: ${sectionResult.IPEName}\n` +
                 `Önerilen HEA Kesiti: ${sectionResult.HEAName}\n` +
-                `Önerilen HEB Kesiti: ${sectionResult.HEBName}`;
+                `Önerilen HEB Kesiti: ${sectionResult.HEBName}\n\n` +
+                `--- BURKULMA KONTROLLERİ (AISC) ---\n` +
+                (sectionResult.IPE ? `IPE ${sectionResult.IPE[0]}:\n` +
+                `  Narinlik Oranı (KL/r) = ${sectionResult.buckling.IPE.KL_ry}\n` +
+                `  Global Burkulma Emniyet Faktörü = ${sectionResult.buckling.IPE.bucklingSafety} ${Number(sectionResult.buckling.IPE.bucklingSafety) >= 1.0 ? '✓' : '✗'}\n` +
+                `  Gövde Yerel Burkulma Kontrolü: h/tw = ${sectionResult.buckling.IPE.webRatio} <= ${sectionResult.buckling.IPE.webLimit} ${sectionResult.buckling.IPE.webCheck ? '✓' : '✗'}\n` +
+                `  Başlık Yerel Burkulma Kontrolü: b/(2*tf) = ${sectionResult.buckling.IPE.flangeRatio} <= ${sectionResult.buckling.IPE.flangeLimit} ${sectionResult.buckling.IPE.flangeCheck ? '✓' : '✗'}\n` : '') +
+                (sectionResult.HEA ? `\nHEA ${sectionResult.HEA[0]}:\n` +
+                `  Narinlik Oranı (KL/r) = ${sectionResult.buckling.HEA.KL_ry}\n` +
+                `  Global Burkulma Emniyet Faktörü = ${sectionResult.buckling.HEA.bucklingSafety} ${Number(sectionResult.buckling.HEA.bucklingSafety) >= 1.0 ? '✓' : '✗'}\n` +
+                `  Gövde Yerel Burkulma Kontrolü: h/tw = ${sectionResult.buckling.HEA.webRatio} <= ${sectionResult.buckling.HEA.webLimit} ${sectionResult.buckling.HEA.webCheck ? '✓' : '✗'}\n` +
+                `  Başlık Yerel Burkulma Kontrolü: b/(2*tf) = ${sectionResult.buckling.HEA.flangeRatio} <= ${sectionResult.buckling.HEA.flangeLimit} ${sectionResult.buckling.HEA.flangeCheck ? '✓' : '✗'}\n` : '') +
+                (sectionResult.HEB ? `\nHEB ${sectionResult.HEB[0]}:\n` +
+                `  Narinlik Oranı (KL/r) = ${sectionResult.buckling.HEB.KL_ry}\n` +
+                `  Global Burkulma Emniyet Faktörü = ${sectionResult.buckling.HEB.bucklingSafety} ${Number(sectionResult.buckling.HEB.bucklingSafety) >= 1.0 ? '✓' : '✗'}\n` +
+                `  Gövde Yerel Burkulma Kontrolü: h/tw = ${sectionResult.buckling.HEB.webRatio} <= ${sectionResult.buckling.HEB.webLimit} ${sectionResult.buckling.HEB.webCheck ? '✓' : '✗'}\n` +
+                `  Başlık Yerel Burkulma Kontrolü: b/(2*tf) = ${sectionResult.buckling.HEB.flangeRatio} <= ${sectionResult.buckling.HEB.flangeLimit} ${sectionResult.buckling.HEB.flangeCheck ? '✓' : '✗'}\n` : '');
             
             resultLabel.textContent = results;
+              // Burkulma bilgilerini kesit dizilerine ekle
+            if (sectionResult.IPE && sectionResult.buckling.IPE) {
+                sectionResult.IPE[8] = sectionResult.buckling.IPE;
+            }
+            if (sectionResult.HEA && sectionResult.buckling.HEA) {
+                sectionResult.HEA[8] = sectionResult.buckling.HEA;
+            }
+            if (sectionResult.HEB && sectionResult.buckling.HEB) {
+                sectionResult.HEB[8] = sectionResult.buckling.HEB;
+            }
             
             // Seçilen kesitlerin görsel gösterimi
             const sectionsHTML = `

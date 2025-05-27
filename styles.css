@@ -49,7 +49,7 @@ h3 {
     gap: 25px;
 }
 
-.input-frame, .descriptions-frame, .result-frame, .schematics-frame {
+.input-frame, .descriptions-frame, .result-frame, .schematics-frame, .info-frame {
     border: 1px solid #ddd;
     border-radius: 8px;
     padding: 20px;
@@ -336,6 +336,90 @@ footer {
 
 .dimension-value {
     color: #3498db;
+}
+
+.section-buckling-title {
+    font-weight: bold;
+    color: #2c3e50;
+    margin-top: 10px;
+    margin-bottom: 5px;
+    border-top: 1px dashed #ecf0f1;
+    padding-top: 8px;
+}
+
+.safe {
+    color: #27ae60;
+    font-weight: bold;
+}
+
+.unsafe {
+    color: #e74c3c;
+    font-weight: bold;
+}
+
+/* Burkulma bilgileri için stiller */
+.info-frame {
+    margin-top: 25px;
+}
+
+.info-content {
+    background-color: #fff;
+    border-radius: 5px;
+    padding: 15px;
+    box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.1);
+}
+
+.info-content p {
+    margin-bottom: 15px;
+    line-height: 1.6;
+}
+
+.info-content ul {
+    margin: 10px 0 15px 20px;
+}
+
+.info-content li {
+    margin-bottom: 8px;
+    line-height: 1.5;
+}
+
+.info-note {
+    background-color: #f8f9fa;
+    border-left: 4px solid #3498db;
+    padding: 10px;
+    margin-top: 15px;
+    font-size: 0.95em;
+    color: #2c3e50;
+}
+
+/* Formül kutusu stilleri */
+.formula-box {
+    background-color: #f1f8fe;
+    border: 1px solid #d1e8ff;
+    border-radius: 5px;
+    padding: 10px 15px;
+    margin: 15px 0;
+}
+
+.formula-title {
+    font-weight: bold;
+    color: #2980b9;
+    margin-bottom: 8px;
+    font-size: 0.95em;
+}
+
+.formula {
+    font-family: 'Times New Roman', Times, serif;
+    text-align: center;
+    font-size: 1.1em;
+    margin: 10px 0;
+}
+
+.formula-desc {
+    font-size: 0.9em;
+    color: #555;
+    font-style: italic;
+    margin-top: 5px;
 }
 
 /* Mobil görünüm için responsive ayarlar */

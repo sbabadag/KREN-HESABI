@@ -234,12 +234,11 @@ document.addEventListener('DOMContentLoaded', function() {
         
         return svg;
     }
-    
-    function drawBeamDiagram(params) {
+      function drawBeamDiagram(params) {
         const { L, aw, WvA_t, WvB_t, MMajor3max } = params;
-        const width = 600;
-        const height = 400;
-        const scale = width / (L * 1.3); // Ölçek faktörü
+        const width = 800;
+        const height = 450;
+        const scale = width / (L * 1.5); // Daha geniş ölçek faktörü
         
         // SVG oluştur
         let svg = `
@@ -247,8 +246,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <defs>
                 <marker id="arrow2" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
                     <polygon points="0 0, 10 3.5, 0 7" fill="#e74c3c"/>
-                </marker>
-                <linearGradient id="momentGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                </marker>                <linearGradient id="momentGradient" x1="0%" y1="100%" x2="0%" y2="0%">
                     <stop offset="0%" style="stop-color:#3498db;stop-opacity:0.2" />
                     <stop offset="100%" style="stop-color:#3498db;stop-opacity:0.7" />
                 </linearGradient>
@@ -274,13 +272,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 <!-- Tekerlekler ve aw mesafesi -->
                 <line x1="${(L * scale - aw * scale) / 2}" y1="50" x2="${(L * scale - aw * scale) / 2}" y2="15" class="force-arrow" stroke="#e74c3c" stroke-width="2" marker-end="url(#arrow2)" />
                 <line x1="${(L * scale + aw * scale) / 2}" y1="50" x2="${(L * scale + aw * scale) / 2}" y2="15" class="force-arrow" stroke="#e74c3c" stroke-width="2" marker-end="url(#arrow2)" />
+                  <!-- Kuvvet değerleri -->
+                <text x="${(L * scale - aw * scale) / 2 - 40}" y="35" class="text-label" font-weight="bold" text-anchor="end">WvA</text>
+                <text x="${(L * scale - aw * scale) / 2 - 40}" y="47" class="text-label" font-size="10px" text-anchor="end">${WvA_t ? WvA_t.toFixed(2) + ' kN' : 'WvA'}</text>
                 
-                <!-- Kuvvet değerleri -->
-                <text x="${(L * scale - aw * scale) / 2 - 15}" y="30" class="text-label" font-weight="bold">WvA</text>
-                <text x="${(L * scale - aw * scale) / 2 - 15}" y="42" class="text-label" font-size="10px">${WvA_t ? WvA_t.toFixed(2) + ' kN' : 'WvA'}</text>
-                
-                <text x="${(L * scale + aw * scale) / 2 + 15}" y="30" class="text-label" font-weight="bold">WvA</text>
-                <text x="${(L * scale + aw * scale) / 2 + 15}" y="42" class="text-label" font-size="10px">${WvA_t ? WvA_t.toFixed(2) + ' kN' : 'WvA'}</text>
+                <text x="${(L * scale + aw * scale) / 2 + 40}" y="35" class="text-label" font-weight="bold" text-anchor="start">WvA</text>
+                <text x="${(L * scale + aw * scale) / 2 + 40}" y="47" class="text-label" font-size="10px" text-anchor="start">${WvA_t ? WvA_t.toFixed(2) + ' kN' : 'WvA'}</text>
                 
                 <!-- aw ölçüsü -->
                 <line x1="${(L * scale - aw * scale) / 2}" y1="65" x2="${(L * scale + aw * scale) / 2}" y2="65" class="dimension-line" stroke="#3498db" stroke-width="1" stroke-dasharray="5,2" />
@@ -304,9 +301,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     <line x1="${L * scale}" y1="-5" x2="${L * scale}" y2="5" stroke="#34495e" stroke-width="1" />
                     <text x="${L * scale}" y="20" class="text-label" text-anchor="middle">0</text>
-                    
-                    <!-- Moment diyagramı (parabolik) -->
-                    <path d="M 0,0 Q ${L * scale / 4},-80 ${L * scale / 2},-100 T ${L * scale},0" 
+                      <!-- Moment diyagramı (parabolik) -->
+                    <path d="M 0,0 Q ${L * scale / 4},80 ${L * scale / 2},100 T ${L * scale},0" 
                           stroke="#3498db" stroke-width="2" fill="url(#momentGradient)" />
                     
                     <!-- Yük pozisyonlarını gösteren çizgiler -->
@@ -317,9 +313,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     <line x1="${(L * scale + aw * scale) / 2}" y1="10" x2="${(L * scale + aw * scale) / 2}" y2="-60" 
                           stroke="#e74c3c" stroke-width="1" stroke-dasharray="5,2" />
                     <text x="${(L * scale + aw * scale) / 2}" y="25" class="text-label" text-anchor="middle" font-weight="bold">2</text>
-                    
-                    <!-- Maksimum moment değeri -->
-                    <text x="${L * scale / 2}" y="-110" class="text-label" text-anchor="middle" font-weight="bold">Mmax = ${MMajor3max ? MMajor3max.toFixed(2) + ' kNm' : 'Mmax'}</text>
+                      <!-- Maksimum moment değeri -->
+                    <text x="${L * scale / 2}" y="110" class="text-label" text-anchor="middle" font-weight="bold">Mmax = ${MMajor3max ? MMajor3max.toFixed(2) + ' kNm' : 'Mmax'}</text>
                 </g>
             </g>
         </svg>`;

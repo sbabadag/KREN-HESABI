@@ -151,10 +151,11 @@ footer {
 
 /* Şematik diyagramlar için stiller */
 .schematics-container {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
     margin-top: 10px;
+    width: 100%;
 }
 
 .schematic-item {
@@ -165,6 +166,7 @@ footer {
     display: flex;
     flex-direction: column;
     align-items: center;
+    width: 100%;
 }
 
 .schematic-item h3 {
@@ -173,16 +175,22 @@ footer {
     padding-bottom: 5px;
     width: 100%;
     text-align: center;
+    margin-bottom: 15px;
 }
 
 .schematic-svg {
     width: 100%;
-    min-height: 250px;
+    height: auto;
+    aspect-ratio: 2 / 1;
     background-color: #f9f9f9;
     border-radius: 5px;
     overflow: hidden;
     margin-top: 10px;
     border: 1px solid #ecf0f1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 10px;
 }
 
 /* SVG öğeleri için stiller */

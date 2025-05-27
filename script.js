@@ -1,4 +1,4 @@
-// script.js - Vinç hesap algoritması
+// script.js - Enhanced crane calculation visualization
 document.addEventListener('DOMContentLoaded', function() {
     // DOM elementlerini yakala
     const calculateBtn = document.getElementById('calculate-btn');

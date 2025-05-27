@@ -32,13 +32,19 @@ h2 {
     color: #444;
 }
 
+h3 {
+    margin-bottom: 8px;
+    font-size: 1em;
+    color: #555;
+}
+
 .main-frame {
     display: flex;
     flex-direction: column;
     gap: 20px;
 }
 
-.input-frame, .descriptions-frame, .result-frame {
+.input-frame, .descriptions-frame, .result-frame, .schematics-frame {
     border: 1px solid #ddd;
     border-radius: 5px;
     padding: 15px;
@@ -191,4 +197,76 @@ footer {
     font-style: italic;
     text-align: center;
     padding: 20px 0;
+}
+
+/* Şema stilleri */
+.schematics-container {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
+    margin-top: 10px;
+}
+
+.schematic-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-bottom: 15px;
+    border-bottom: 1px dashed #ccc;
+}
+
+.schematic-svg {
+    width: 100%;
+    min-height: 200px;
+    background-color: #f9f9f9;
+    border-radius: 5px;
+    overflow: hidden;
+    margin-top: 5px;
+    display: flex;
+    justify-content: center;
+}
+
+.schematic-svg svg {
+    max-width: 100%;
+    height: auto;
+}
+
+/* SVG stil elementleri */
+.crane-line {
+    stroke: #333;
+    stroke-width: 2;
+}
+
+.crane-load {
+    stroke: #e74c3c;
+    stroke-width: 2;
+    fill: none;
+}
+
+.dimension-line {
+    stroke: #3498db;
+    stroke-width: 1;
+    stroke-dasharray: 5,3;
+}
+
+.force-arrow {
+    stroke: #e74c3c;
+    stroke-width: 2;
+    fill: none;
+}
+
+.text-label {
+    font-family: Arial, sans-serif;
+    font-size: 12px;
+    fill: #333;
+}
+
+@media (min-width: 700px) {
+    .schematics-container {
+        grid-template-columns: 1fr 1fr;
+    }
+    
+    .schematic-item:first-child {
+        grid-column: 1 / span 2;
+    }
 }

@@ -7,6 +7,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const sectionResultsDiv = document.createElement('div');
     sectionResultsDiv.id = 'section-results';
     
+    // Şema container elementlerini yakala
+    const craneSideView = document.getElementById('crane-side-view');
+    const forceDiagram = document.getElementById('force-diagram');
+    const beamDiagram = document.getElementById('beam-diagram');
+    
     // result-frame'in içine section-results div'ini ekle
     document.querySelector('.result-frame').appendChild(sectionResultsDiv);
     
@@ -98,6 +103,193 @@ document.addEventListener('DOMContentLoaded', function() {
     // Varsayılan değerler düğmesine tıklama olayı ekle
     defaultBtn.addEventListener('click', setDefaultValues);
     
+    // Şematik diyagramları oluşturan fonksiyonlar
+    function drawCraneSideView(params) {
+        const { Lc, ah } = params;
+        
+        const width = 600;
+        const height = 300;
+        const scale = width / (Lc * 1.2); // Ölçek faktörü
+        
+        // SVG oluştur
+        let svg = `
+        <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+            <defs>
+                <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto">
+                    <polygon points="0 0, 10 3.5, 0 7" fill="#e74c3c"/>
+                </marker>
+            </defs>
+            <g transform="translate(50, 50)">
+                <!-- Taban çizgisi -->
+                <line x1="0" y1="${height - 80}" x2="${width - 100}" y2="${height - 80}" class="crane-line" />
+                
+                <!-- Sol kolon -->
+                <line x1="0" y1="${height - 80}" x2="0" y2="20" class="crane-line" />
+                <text x="10" y="${height - 120}" class="text-label">4m</text>
+                
+                <!-- Sağ kolon -->
+                <line x1="${width - 100}" y1="${height - 80}" x2="${width - 100}" y2="20" class="crane-line" />
+                <text x="${width - 90}" y="${height - 120}" class="text-label">4m</text>
+                
+                <!-- Çatı -->
+                <line x1="0" y1="20" x2="${(width - 100) / 2}" y2="-30" class="crane-line" />
+                <line x1="${width - 100}" y1="20" x2="${(width - 100) / 2}" y2="-30" class="crane-line" />
+                
+                <!-- Kren kirişi -->
+                <line x1="20" y1="${height - 180}" x2="${width - 120}" y2="${height - 180}" class="crane-line" />
+                <text x="${(width - 100) / 2}" y="${height - 155}" class="text-label">Lc = ${Lc}m</text>
+                
+                <!-- Kanca -->
+                <line x1="${20 + ah * scale}" y1="${height - 180}" x2="${20 + ah * scale}" y2="${height - 140}" class="crane-load" />
+                <text x="${20 + ah * scale - 10}" y="${height - 120}" class="text-label">ah</text>
+                
+                <!-- Yük gösterimi -->
+                <rect x="${20 + ah * scale - 20}" y="${height - 140}" width="40" height="30" fill="#f39c12" stroke="#e67e22" />
+                <text x="${20 + ah * scale}" y="${height - 120}" class="text-label" text-anchor="middle">Wcb+Wcap</text>
+                
+                <!-- Kren ağırlığı -->
+                <line x1="${(width - 100) / 2}" y1="${height - 180}" x2="${(width - 100) / 2}" y2="${height - 140}" class="crane-load" />
+                <text x="${(width - 100) / 2}" y="${height - 120}" class="text-label" text-anchor="middle">Wc</text>
+            </g>
+        </svg>`;
+        
+        return svg;
+    }
+    
+    function drawForceDiagram() {
+        const width = 400;
+        const height = 200;
+        
+        // SVG oluştur
+        let svg = `
+        <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+            <defs>
+                <marker id="arrow" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto">
+                    <polygon points="0 0, 10 3.5, 0 7" fill="#e74c3c"/>
+                </marker>
+            </defs>
+            <g transform="translate(50, 50)">
+                <!-- Ray çizgisi -->
+                <line x1="0" y1="50" x2="${width - 100}" y2="30" class="crane-line" stroke-width="3" />
+                <text x="${width - 150}" y="20" class="text-label" text-anchor="middle">crane rail</text>
+                
+                <!-- Wv (dikey yük) -->
+                <line x1="${width / 2 - 50}" y1="0" x2="${width / 2 - 50}" y2="40" class="force-arrow" marker-end="url(#arrow)" />
+                <text x="${width / 2 - 70}" y="20" class="text-label" text-anchor="middle">Wv</text>
+                
+                <!-- Wh1 (yatay kuvvet) -->
+                <line x1="${width / 2}" y1="40" x2="${width / 2 + 40}" y2="40" class="force-arrow" marker-end="url(#arrow)" />
+                <text x="${width / 2 + 20}" y="30" class="text-label" text-anchor="middle">Wh1</text>
+                
+                <!-- Wh2 (yatay kuvvet) -->
+                <line x1="${width / 2 - 80}" y1="40" x2="${width / 2 - 120}" y2="40" class="force-arrow" marker-end="url(#arrow)" />
+                <text x="${width / 2 - 100}" y="30" class="text-label" text-anchor="middle">Wh2</text>
+            </g>
+        </svg>`;
+        
+        return svg;
+    }
+    
+    function drawBeamDiagram(params) {
+        const { L, aw } = params;
+        const width = 600;
+        const height = 350;
+        const scale = width / (L * 1.3); // Ölçek faktörü
+        
+        // SVG oluştur
+        let svg = `
+        <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+            <defs>
+                <marker id="arrow2" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto">
+                    <polygon points="0 0, 10 3.5, 0 7" fill="#e74c3c"/>
+                </marker>
+            </defs>
+            <g transform="translate(50, 30)">
+                <!-- Üst kısım - kiriş ve yükler -->
+                <line x1="0" y1="50" x2="${L * scale}" y2="50" class="crane-line" stroke-width="3" />
+                <text x="${L * scale / 2}" y="30" class="text-label" text-anchor="middle">crane beam</text>
+                
+                <!-- Sol destek -->
+                <line x1="0" y1="50" x2="0" y2="80" class="crane-line" />
+                <line x1="-10" y1="80" x2="10" y2="80" class="crane-line" />
+                <line x1="-10" y1="80" x2="0" y2="90" class="crane-line" />
+                <line x1="10" y1="80" x2="0" y2="90" class="crane-line" />
+                
+                <!-- Sağ destek -->
+                <line x1="${L * scale}" y1="50" x2="${L * scale}" y2="80" class="crane-line" />
+                <line x1="${L * scale - 10}" y1="80" x2="${L * scale + 10}" y2="80" class="crane-line" />
+                <line x1="${L * scale - 10}" y1="80" x2="${L * scale}" y2="90" class="crane-line" />
+                <line x1="${L * scale + 10}" y1="80" x2="${L * scale}" y2="90" class="crane-line" />
+                
+                <!-- Tekerlekler ve aw mesafesi -->
+                <line x1="${(L * scale - aw * scale) / 2}" y1="50" x2="${(L * scale - aw * scale) / 2}" y2="20" class="force-arrow" marker-end="url(#arrow2)" />
+                <line x1="${(L * scale + aw * scale) / 2}" y1="50" x2="${(L * scale + aw * scale) / 2}" y2="20" class="force-arrow" marker-end="url(#arrow2)" />
+                <text x="${(L * scale - aw * scale) / 2 - 15}" y="35" class="text-label">WvA</text>
+                <text x="${(L * scale + aw * scale) / 2 + 15}" y="35" class="text-label">WvA</text>
+                
+                <!-- aw ölçüsü -->
+                <line x1="${(L * scale - aw * scale) / 2}" y1="60" x2="${(L * scale + aw * scale) / 2}" y2="60" class="dimension-line" />
+                <text x="${L * scale / 2}" y="75" class="text-label" text-anchor="middle">aw = ${aw}m</text>
+                
+                <!-- L ölçüsü -->
+                <line x1="0" y1="100" x2="${L * scale}" y2="100" class="dimension-line" />
+                <text x="${L * scale / 2}" y="115" class="text-label" text-anchor="middle">L = ${L}m</text>
+                
+                <!-- Alt kısım - moment diyagramı -->
+                <g transform="translate(0, 150)">
+                    <!-- Diyagramın tabanı -->
+                    <line x1="0" y1="0" x2="${L * scale}" y2="0" class="crane-line" />
+                    
+                    <!-- Sol ve sağ destekler -->
+                    <line x1="0" y1="-5" x2="0" y2="5" class="crane-line" />
+                    <text x="0" y="20" class="text-label" text-anchor="middle">1</text>
+                    
+                    <line x1="${L * scale}" y1="-5" x2="${L * scale}" y2="5" class="crane-line" />
+                    <text x="${L * scale}" y="20" class="text-label" text-anchor="middle">1</text>
+                    
+                    <!-- Moment diyagramı (şematik) -->
+                    <path d="M 0,0 Q ${L * scale / 4},80 ${L * scale / 2},100 T ${L * scale},0" 
+                          stroke="#3498db" stroke-width="2" fill="none" />
+                    
+                    <!-- Yük pozisyonlarını gösteren çizgiler -->
+                    <line x1="${(L * scale - aw * scale) / 2}" y1="-10" x2="${(L * scale - aw * scale) / 2}" y2="60" 
+                          class="dimension-line" stroke-dasharray="3,2" />
+                    <text x="${(L * scale - aw * scale) / 2}" y="80" class="text-label" text-anchor="middle">2</text>
+                    
+                    <line x1="${(L * scale + aw * scale) / 2}" y1="-10" x2="${(L * scale + aw * scale) / 2}" y2="60" 
+                          class="dimension-line" stroke-dasharray="3,2" />
+                    <text x="${(L * scale + aw * scale) / 2}" y="80" class="text-label" text-anchor="middle">2</text>
+                    
+                    <text x="${L * scale / 2}" y="120" class="text-label" text-anchor="middle">Qmax ve M diyagramları</text>
+                </g>
+            </g>
+        </svg>`;
+        
+        return svg;
+    }
+    
+    // Şemaları ilk yükleme sırasında çiz
+    function drawInitialSchemes() {
+        // Varsayılan parametreler
+        const defaultParams = {
+            Lc: 33.0,
+            ah: 0.8,
+            aw: 1.56,
+            wc: 380.0,
+            wcb: 50.0,
+            wcap: 200.0,
+            L: 12.0
+        };
+        
+        // Şemaları çiz
+        if (craneSideView) craneSideView.innerHTML = drawCraneSideView(defaultParams);
+        if (forceDiagram) forceDiagram.innerHTML = drawForceDiagram();
+        if (beamDiagram) beamDiagram.innerHTML = drawBeamDiagram(defaultParams);
+    }
+    
+    // Sayfa yüklendiğinde şemaları çiz
+    drawInitialSchemes();
+    
     // Kesit seçimi yapan fonksiyon
     function sectionDesign(moment) {
         // moment kNm cinsinden, kesit tablosundaki değerler cm3 cinsinden
@@ -187,6 +379,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 throw new Error("Tüm alanlar sayısal değer içermelidir.");
             }
             
+            // Parametre değiştiğinde şemaları güncelle
+            const params = { Lc, ah, aw, wc, wcb, wcap, L };
+            if (craneSideView) craneSideView.innerHTML = drawCraneSideView(params);
+            if (forceDiagram) forceDiagram.innerHTML = drawForceDiagram();
+            if (beamDiagram) beamDiagram.innerHTML = drawBeamDiagram(params);
+            
             // Hesaplamalar - Python kodundaki formüller ile aynı
             const RA = (wc / 2) + ((Lc - ah) / Lc) * (wcb + wcap);
             const RB = wc + wcb + wcap - RA;
@@ -272,5 +470,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 inputFields[key].value = defaults[key];
             }
         }
+        
+        // Varsayılan değerlerle şemaları güncelle
+        if (craneSideView) craneSideView.innerHTML = drawCraneSideView(defaults);
+        if (forceDiagram) forceDiagram.innerHTML = drawForceDiagram();
+        if (beamDiagram) beamDiagram.innerHTML = drawBeamDiagram(defaults);
     }
 });

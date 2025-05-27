@@ -806,4 +806,41 @@ document.addEventListener('DOMContentLoaded', function() {
         if (forceDiagram) forceDiagram.innerHTML = drawForceDiagram();
         if (beamDiagram) beamDiagram.innerHTML = drawBeamDiagram(defaults);
     }
+    
+    function createSectionResult(section, name, buckling) {
+        const sectionDiv = document.createElement('div');
+        sectionDiv.className = 'section-result';
+        
+        const nameElem = document.createElement('h3');
+        nameElem.textContent = section ? section[0] : `Uygun ${name} kesit bulunamadı`;
+        sectionDiv.appendChild(nameElem);
+        
+        if (section && buckling) {
+            const detailsDiv = document.createElement('div');
+            detailsDiv.className = 'section-details';
+            
+            let stiffenerText = '';
+            if (buckling.stiffenerInfo && buckling.stiffenerInfo.needsStiffeners) {
+                const spacing = (buckling.stiffenerInfo.spacing / 100).toFixed(2); // convert to meters
+                stiffenerText = `
+                    <div class="stiffener-info">
+                        <p><strong>Gövde Berkitme Gerekli ✓</strong></p>
+                        <p>Berkitme Aralığı: ${spacing} m</p>
+                        <p>Efektif Gövde Narinliği: ${buckling.webRatio}</p>
+                    </div>`;
+            }
+            
+            detailsDiv.innerHTML = `
+                <p>Burkulma Güvenliği: ${buckling.bucklingSafety} ${Number(buckling.bucklingSafety) >= 1.0 ? '✓' : '✗'}</p>
+                <p>Gövde Narinliği: ${buckling.webRatio} / ${buckling.webLimit} ${buckling.webCheck ? '✓' : '✗'}</p>
+                <p>Başlık Narinliği: ${buckling.flangeRatio} / ${buckling.flangeLimit} ${buckling.flangeCheck ? '✓' : '✗'}</p>
+                <p>Moment Güvenliği: ${buckling.momentSafety} ${Number(buckling.momentSafety) >= 1.0 ? '✓' : '✗'}</p>
+                ${stiffenerText}
+            `;
+            
+            sectionDiv.appendChild(detailsDiv);
+        }
+        
+        return sectionDiv;
+    }
 });

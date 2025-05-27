@@ -4,6 +4,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const calculateBtn = document.getElementById('calculate-btn');
     const defaultBtn = document.getElementById('default-btn');
     const resultLabel = document.getElementById('result-label');
+    const sectionResultsDiv = document.createElement('div');
+    sectionResultsDiv.id = 'section-results';
+    
+    // result-frame'in içine section-results div'ini ekle
+    document.querySelector('.result-frame').appendChild(sectionResultsDiv);
     
     // IPE kesit verileri [Ad, h (mm), b (mm), tw (mm), tf (mm), Iy (cm4), Wel,y (cm3), Wpl,y (cm3)]
     const IPEsections = [
@@ -109,12 +114,59 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const result = {
             requiredWpl: requiredWpl.toFixed(2),
-            IPE: suitableIPE ? suitableIPE[0] : "Uygun IPE kesit bulunamadı",
-            HEA: suitableHEA ? suitableHEA[0] : "Uygun HEA kesit bulunamadı",
-            HEB: suitableHEB ? suitableHEB[0] : "Uygun HEB kesit bulunamadı"
+            IPE: suitableIPE ? suitableIPE : null,
+            HEA: suitableHEA ? suitableHEA : null,
+            HEB: suitableHEB ? suitableHEB : null,
+            IPEName: suitableIPE ? suitableIPE[0] : "Uygun IPE kesit bulunamadı",
+            HEAName: suitableHEA ? suitableHEA[0] : "Uygun HEA kesit bulunamadı",
+            HEBName: suitableHEB ? suitableHEB[0] : "Uygun HEB kesit bulunamadı"
         };
         
         return result;
+    }
+    
+    // Kesit çizimini oluşturan fonksiyon
+    function drawSection(section, type) {
+        if (!section) return `<div class="section-not-found">Uygun ${type} Kesit Bulunamadı</div>`;
+        
+        const name = section[0];
+        const h = section[1]; // yükseklik
+        const b = section[2]; // genişlik
+        const tw = section[3]; // gövde kalınlığı
+        const tf = section[4]; // flanş kalınlığı
+        
+        // Çizim için ölçeklendirme (mm -> px)
+        const scale = 0.5;
+        const scaledH = h * scale;
+        const scaledB = b * scale;
+        const scaledTw = Math.max(tw * scale, 2); // En az 2px kalınlık
+        const scaledTf = Math.max(tf * scale, 2); // En az 2px kalınlık
+        
+        // SVG çizim alanı
+        let svg = `
+        <div class="section-container">
+            <div class="section-title">${name}</div>
+            <svg width="${scaledB + 20}" height="${scaledH + 20}" viewBox="0 0 ${scaledB + 20} ${scaledH + 20}">
+                <g transform="translate(10, 10)">
+                    <!-- Üst flanş -->
+                    <rect x="0" y="0" width="${scaledB}" height="${scaledTf}" fill="#3498db" />
+                    
+                    <!-- Gövde -->
+                    <rect x="${(scaledB - scaledTw) / 2}" y="${scaledTf}" width="${scaledTw}" height="${scaledH - 2 * scaledTf}" fill="#3498db" />
+                    
+                    <!-- Alt flanş -->
+                    <rect x="0" y="${scaledH - scaledTf}" width="${scaledB}" height="${scaledTf}" fill="#3498db" />
+                </g>
+            </svg>
+            <div class="section-dimensions">
+                <span>h: ${h} mm</span>
+                <span>b: ${b} mm</span>
+                <span>tw: ${tw} mm</span>
+                <span>tf: ${tf} mm</span>
+            </div>
+        </div>`;
+        
+        return svg;
     }
     
     // Hesaplama fonksiyonu
@@ -174,11 +226,29 @@ document.addEventListener('DOMContentLoaded', function() {
                 `MMinor2max = ${MMinor2max.toFixed(2)} kNm\n\n` +
                 `--- KESİT TASARIMI (S275 Çeliği) ---\n` +
                 `Gerekli Plastik Kesit Modülü = ${sectionResult.requiredWpl} cm³\n` +
-                `Önerilen IPE Kesiti: ${sectionResult.IPE}\n` +
-                `Önerilen HEA Kesiti: ${sectionResult.HEA}\n` +
-                `Önerilen HEB Kesiti: ${sectionResult.HEB}`;
+                `Önerilen IPE Kesiti: ${sectionResult.IPEName}\n` +
+                `Önerilen HEA Kesiti: ${sectionResult.HEAName}\n` +
+                `Önerilen HEB Kesiti: ${sectionResult.HEBName}`;
             
             resultLabel.textContent = results;
+            
+            // Seçilen kesitlerin görsel gösterimi
+            const sectionsHTML = `
+                <div class="section-title-main">Seçilen Kesit Profilleri</div>
+                <div class="sections-grid">
+                    <div class="section-column">
+                        ${drawSection(sectionResult.IPE, "IPE")}
+                    </div>
+                    <div class="section-column">
+                        ${drawSection(sectionResult.HEA, "HEA")}
+                    </div>
+                    <div class="section-column">
+                        ${drawSection(sectionResult.HEB, "HEB")}
+                    </div>
+                </div>
+            `;
+            
+            sectionResultsDiv.innerHTML = sectionsHTML;
             
         } catch (error) {
             alert("Hata: " + error.message);

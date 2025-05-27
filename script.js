@@ -443,20 +443,21 @@ document.addEventListener('DOMContentLoaded', function() {
         // AISC'ye göre kritik burkulma gerilmesi
         let Fcr;
         if (KL_ry <= 4.71 * Math.sqrt(E / fy)) {
-            // Elastik olmayan burkulma
-            Fcr = Math.pow(0.658, (fy/Fe)) * fy; // kN/cm²
+            // Elastik olmayan burkulma - AISC Equation E3-2
+            Fcr = fy * Math.pow(Math.E, (-0.419 * Math.pow(KL_ry / (4.71 * Math.sqrt(E / fy)), 2))); // kN/cm²
         } else {
-            // Elastik burkulma
+            // Elastik burkulma - AISC Equation E3-3
             Fcr = 0.877 * Fe; // kN/cm²
         }
         
         // Burkulma dayanımı
         const Pn = Fcr * A; // kN
         const PhiPn = 0.9 * Pn; // Güvenlik faktörü uygulanmış burkulma dayanımı
-          // AISC'ye göre kiriş burkulma momenti
-        // Kritik elastik moment (Mcr) - AISC F2.2
-        const Cb = 1.0; // Moment diyagramı düzeltme faktörü (uniform moment için)
         
+        // Moment hesaplamaları için birim dönüşümleri
+        const moment_Ncm = moment * 100000; // kNm to Ncm
+        
+        // Yanal burkulma momenti hesaplamaları
         // AISC Table User Note F2.2
         // I-kesit için yanal-burulmalı burkulma parametreleri
         const Lp = 1.76 * ry * Math.sqrt(E / fy); // Plastik limit uzunluğu, cm
@@ -500,7 +501,12 @@ document.addEventListener('DOMContentLoaded', function() {
           // Moment taşıma kapasitesi kontrolü
         const designMoment = PhiMn; // kNm
         const appliedMoment = moment; // kNm
-        const globalSafetyFactor = designMoment / appliedMoment; // Tasarım momenti / uygulanan moment
+        
+        // Combined flexural and axial buckling check
+        const axialStress = appliedMoment / A; // Axial stress from moment
+        const bendingStress = appliedMoment * (h/2) / Iy; // Bending stress
+        const combinedRatio = axialStress/Fcr + bendingStress/(0.9 * fy);
+        const globalSafetyFactor = 1.0 / combinedRatio;
         
         // Sonuçları döndür
         return {
@@ -515,39 +521,35 @@ document.addEventListener('DOMContentLoaded', function() {
             flangeCheck: flangeCheck,
             bucklingMoment: PhiMn.toFixed(2), // kNm
             plasticMoment: Mp.toFixed(2), // kNm
-            elasticMoment: My.toFixed(2) // kNm
+            elasticMoment: My.toFixed(2), // kNm
+            momentSafety: momentSafety.toFixed(2),
+            interactionRatio: combinedRatio.toFixed(3),
         };
     }
     
     // Burkulma kontrollerini geçen uygun kesiti bulan fonksiyon
     function findSuitableSectionWithBuckling(sections, requiredWpl, L, moment) {
-        for (let i = 0; i < sections.length; i++) {
-            if (sections[i][7] >= requiredWpl) {
-                const bucklingCheck = calculateBuckling(sections[i], L, moment);
-                if (Number(bucklingCheck.bucklingSafety) >= 1.0 && 
-                    bucklingCheck.webCheck && 
-                    bucklingCheck.flangeCheck) {
-                    return {
-                        section: sections[i],
-                        buckling: bucklingCheck
-                    };
-                }
-            }
-        }
+        // Sort sections by increasing plastic section modulus for efficiency
+        const sortedSections = sections.slice().sort((a, b) => a[7] - b[7]);
         
-        // Eğer moment kapasitesini sağlayan ilk kesit burkulma kontrollerini geçemezse,
-        // daha büyük kesitleri dene
-        for (let i = 0; i < sections.length; i++) {
-            if (sections[i][7] > requiredWpl) {
-                const bucklingCheck = calculateBuckling(sections[i], L, moment);
-                if (Number(bucklingCheck.bucklingSafety) >= 1.0 && 
-                    bucklingCheck.webCheck && 
-                    bucklingCheck.flangeCheck) {
-                    return {
-                        section: sections[i],
-                        buckling: bucklingCheck
-                    };
-                }
+        for (let i = 0; i < sortedSections.length; i++) {
+            const section = sortedSections[i];
+            
+            // Skip sections that don't meet the basic moment capacity requirement
+            if (section[7] < requiredWpl) continue;
+            
+            const bucklingCheck = calculateBuckling(section, L, moment);
+            
+            // Check all safety criteria
+            const isGlobalSafe = Number(bucklingCheck.bucklingSafety) >= 1.0;
+            const isLocalSafe = bucklingCheck.webCheck && bucklingCheck.flangeCheck;
+            const isMomentSafe = Number(bucklingCheck.momentSafety) >= 1.0;
+            
+            if (isGlobalSafe && isLocalSafe && isMomentSafe) {
+                return {
+                    section: section,
+                    buckling: bucklingCheck
+                };
             }
         }
         
@@ -556,7 +558,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Kesit çizimini oluşturan fonksiyon
     function drawSection(section, type) {
-        if (!section) return `<div class="section-not-found">Uygun ${type} Kesit Bulunamadı</div>`;
+        if (!section) return `<div class="section-not-found">Uygun ${type} Kesit Bulunmadı</div>`;
         
         const name = section[0];
         const h = section[1]; // yükseklik

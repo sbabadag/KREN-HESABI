@@ -347,11 +347,14 @@ document.addEventListener('DOMContentLoaded', function() {
     drawInitialSchemes();
       // Kesit seçimi yapan fonksiyon
     function sectionDesign(moment, L) {
-        // Moment conversion: kNm -> Ncm
-        const moment_Ncm = moment * 100000; // 1 kNm = 100000 Nmm = 100000/10 Ncm
+        // moment is in kNm, we need to work in consistent units throughout
         
-        // Required plastic section modulus (cm³)
-        const requiredWpl = (moment_Ncm / 10) / (fy * 0.9); // Divide by 10 to convert Ncm to kNcm
+        // Calculate required plastic section modulus (cm³)
+        // Formula: Wpl = M / (fy * φ)
+        // M in kNcm = moment * 100 (kNm to kNcm)
+        // fy in kN/cm² = 27.5 (275 MPa = 27.5 kN/cm²)
+        // φ = 0.9 (safety factor)
+        const requiredWpl = (moment * 100) / (27.5 * 0.9);
         
         // Find suitable section for each profile type
         const suitableIPE = findSuitableSectionWithBuckling(IPEsections, requiredWpl, L, moment);
@@ -379,7 +382,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return result;
     }    // AISC burkulma kontrollerini hesaplayan fonksiyon
     function calculateBuckling(section, L, moment) {
-        // Kesit bilgilerini çıkar
+        // Kesit bilgilerini çıkar (all converted to cm)
         const name = section[0];
         const h = section[1] / 10; // mm -> cm
         const b = section[2] / 10; // mm -> cm
@@ -389,93 +392,85 @@ document.addEventListener('DOMContentLoaded', function() {
         const Wely = section[6]; // cm³
         const Wply = section[7]; // cm³
         
-        // Kesit özellikleri hesapla
+        // Section properties (all in cm units)
         const A = 2 * b * tf + (h - 2 * tf) * tw; // cm²
-        
-        // Atalet momentini kesit verilerinden al
-        // Atalet yarıçapı hesapla
         const ry = Math.sqrt(Iy / A); // cm
         
-        // Euler (genel) burkulma kontrolü - her iki uçta mafsallı kiriş (K=1.0)
+        // Convert length to cm and calculate slenderness ratio
         const L_cm = L * 100; // m -> cm
-        const KL_ry = L_cm / ry; // narinlik oranı
+        const KL_ry = L_cm / ry;
         
-        // AISC'ye göre elastik burkulma gerilmesi
-        const E = 21000; // kN/cm² (elastisite modülü)
-        const Fe = Math.PI * Math.PI * E / Math.pow(KL_ry, 2); // kN/cm²
+        // Material properties in consistent units
+        const E = 21000; // kN/cm²
+        const fy = 27.5;  // kN/cm² (converted from 275 MPa)
         
-        // AISC'ye göre kritik burkulma gerilmesi
+        // Elastic buckling stress (kN/cm²)
+        const Fe = Math.PI * Math.PI * E / Math.pow(KL_ry, 2);
+        
+        // Critical buckling stress (kN/cm²)
         let Fcr;
         if (KL_ry <= 4.71 * Math.sqrt(E / fy)) {
-            // Elastik olmayan burkulma - AISC Equation E3-2
-            Fcr = fy * Math.pow(Math.E, (-0.419 * Math.pow(KL_ry / (4.71 * Math.sqrt(E / fy)), 2))); // kN/cm²
+            // Inelastic buckling - AISC Equation E3-2
+            Fcr = fy * Math.pow(0.658, (fy/Fe));
         } else {
-            // Elastik burkulma - AISC Equation E3-3
-            Fcr = 0.877 * Fe; // kN/cm²
+            // Elastic buckling - AISC Equation E3-3
+            Fcr = 0.877 * Fe;
         }
         
-        // Burkulma dayanımı
-        const Pn = Fcr * A; // kN
-        const PhiPn = 0.9 * Pn; // Güvenlik faktörü uygulanmış burkulma dayanımı
+        // Nominal compressive strength (kN)
+        const Pn = Fcr * A;
+        const PhiPn = 0.9 * Pn;
         
-        // Moment hesaplamaları için birim dönüşümleri
-        const moment_Ncm = moment * 100000; // kNm to Ncm
+        // Convert moment to consistent units (kNcm)
+        const moment_kNcm = moment * 100; // kNm to kNcm
         
-        // Yanal burkulma momenti hesaplamaları
-        // AISC Table User Note F2.2
-        // I-kesit için yanal-burulmalı burkulma parametreleri
-        const Lp = 1.76 * ry * Math.sqrt(E / fy); // Plastik limit uzunluğu, cm
+        // Calculate plastic and elastic moment capacities
+        const Mp = Wply * fy / 10; // kNm
+        const My = Wely * fy / 10; // kNm
         
-        // AISC Equation F2-6
+        // Lateral-torsional buckling parameters
+        const Lp = 1.76 * ry * Math.sqrt(E / fy);
         const Lr = 1.95 * ry * Math.sqrt(E / (0.7 * fy)) * 
-                   Math.sqrt(1 / Math.sqrt(1 + Math.sqrt(1 + 6.76 * Math.pow(0.7 * fy / E, 2)))); // cm
-        
-        const Mp = Wply * fy / 1000; // Plastik moment kapasitesi kNm
-        const My = Wely * fy / 1000; // Elastik moment kapasitesi kNm
-        
-        // AISC F2.2'ye göre yanal burkulma momenti hesapla - Formül F2-1 ila F2-3
+                   Math.sqrt(1 / Math.sqrt(1 + Math.sqrt(1 + 6.76 * Math.pow(0.7 * fy / E, 2))));
+    
+        // Calculate nominal flexural strength
         let Mn;
+        const Cb = 1.0; // Conservative assumption for uniform moment
+    
         if (L_cm <= Lp) {
-            // Plastik bölgede (F2-1)
             Mn = Mp;
         } else if (L_cm <= Lr) {
-            // Elastik olmayan bölgede (F2-2)
             Mn = Cb * (Mp - (Mp - 0.7 * My) * ((L_cm - Lp) / (Lr - Lp)));
         } else {
-            // Elastik bölgede (F2-3)
-            const Fcr = (Cb * Math.PI * Math.PI * E) / Math.pow(L_cm / ry, 2);
-            Mn = Fcr * Wely / 1000; // kNm
-            // AISC F2.2'ye göre sınırlandırma
+            const Fcr_LTB = (Cb * Math.PI * Math.PI * E) / Math.pow(L_cm / ry, 2);
+            Mn = Fcr_LTB * Wely / 1000; // Convert to kNm
             Mn = Math.min(Mn, Mp);
         }
         
-        const PhiMn = 0.9 * Mn; // Güvenlik faktörlü yanal burkulma momenti
+        const PhiMn = 0.9 * Mn;
         
-        // Yerel burkulma kontrolleri
+        // Calculate demand/capacity ratios
+        const momentRatio = moment / PhiMn;
+        const axialRatio = (moment_kNcm * h/2) / (Iy * Fcr); // Bending stress / critical stress
         
-        // Gövde için AISC narinlik limiti (basınç elemanı)
+        // Combined ratio per AISC H1.1
+        const combinedRatio = axialRatio + momentRatio;
+        const globalSafetyFactor = 1.0 / combinedRatio;
+        
+        // Local buckling checks
         const h_tw = (h - 2 * tf) / tw;
         const lambda_w = 1.49 * Math.sqrt(E / fy);
         const webCheck = h_tw <= lambda_w;
         
-        // Başlık (flanş) için AISC narinlik limiti
-        const b_tf = (b / 2) / tf; // yarı başlık genişliği / başlık kalınlığı
+        const b_tf = (b / 2) / tf;
         const lambda_f = 0.56 * Math.sqrt(E / fy);
         const flangeCheck = b_tf <= lambda_f;
-          // Moment taşıma kapasitesi kontrolü
-        const designMoment = PhiMn; // kNm
-        const appliedMoment = moment; // kNm
         
-        // Combined flexural and axial buckling check
-        const axialStress = appliedMoment / A; // Axial stress from moment
-        const bendingStress = appliedMoment * (h/2) / Iy; // Bending stress
-        const combinedRatio = axialStress/Fcr + bendingStress/(0.9 * fy);
-        const globalSafetyFactor = 1.0 / combinedRatio;
-        
-        // Sonuçları döndür
+        // Return results with all relevant safety metrics
         return {
             KL_ry: KL_ry.toFixed(2),
             bucklingSafety: globalSafetyFactor.toFixed(2),
+            momentSafety: (PhiMn / moment).toFixed(2),
             bucklingCapacity: PhiPn.toFixed(2),
             webRatio: h_tw.toFixed(2),
             webLimit: lambda_w.toFixed(2),
@@ -483,29 +478,35 @@ document.addEventListener('DOMContentLoaded', function() {
             flangeRatio: b_tf.toFixed(2),
             flangeLimit: lambda_f.toFixed(2),
             flangeCheck: flangeCheck,
-            bucklingMoment: PhiMn.toFixed(2), // kNm
-            plasticMoment: Mp.toFixed(2), // kNm
-            elasticMoment: My.toFixed(2), // kNm
-            momentSafety: momentSafety.toFixed(2),
-            interactionRatio: combinedRatio.toFixed(3),
+            bucklingMoment: PhiMn.toFixed(2),
+            plasticMoment: Mp.toFixed(2),
+            elasticMoment: My.toFixed(2),
+            axialRatio: axialRatio.toFixed(3),
+            momentRatio: momentRatio.toFixed(3),
+            combinedRatio: combinedRatio.toFixed(3)
         };
     }
     
     // Burkulma kontrollerini geçen uygun kesiti bulan fonksiyon
     function findSuitableSectionWithBuckling(sections, requiredWpl, L, moment) {
-        // First try with sections that meet the basic moment requirement
         for (let i = 0; i < sections.length; i++) {
             const section = sections[i];
             
-            // Check if section meets minimum moment capacity
+            // First check plastic section modulus requirement
             if (section[7] >= requiredWpl) {
                 const bucklingCheck = calculateBuckling(section, L, moment);
                 
-                // Check all safety criteria
+                // Comprehensive safety checks:
+                // 1. Combined buckling and moment safety factor > 1.0
+                // 2. Local web buckling check
+                // 3. Local flange buckling check
+                // 4. Pure moment capacity check
+                // 5. Combined ratio check (AISC H1.1)
                 if (Number(bucklingCheck.bucklingSafety) >= 1.0 && 
                     bucklingCheck.webCheck && 
-                    bucklingCheck.flangeCheck &&
-                    Number(bucklingCheck.momentSafety) >= 1.0) {
+                    bucklingCheck.flangeCheck && 
+                    Number(bucklingCheck.momentSafety) >= 1.0 && 
+                    Number(bucklingCheck.combinedRatio) <= 1.0) {
                     
                     return {
                         section: section,
@@ -515,19 +516,17 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
-        // If no section passed all checks, try with larger sections
+        // Try with larger sections if no suitable section found
         for (let i = 0; i < sections.length; i++) {
             const section = sections[i];
-            
-            // Only check sections larger than required
-            if (section[7] > requiredWpl * 1.2) { // Try 20% larger sections
+            if (section[7] >= requiredWpl * 1.5) { // Try sections with 50% more capacity
                 const bucklingCheck = calculateBuckling(section, L, moment);
                 
-                // Check all safety criteria
                 if (Number(bucklingCheck.bucklingSafety) >= 1.0 && 
                     bucklingCheck.webCheck && 
-                    bucklingCheck.flangeCheck &&
-                    Number(bucklingCheck.momentSafety) >= 1.0) {
+                    bucklingCheck.flangeCheck && 
+                    Number(bucklingCheck.momentSafety) >= 1.0 && 
+                    Number(bucklingCheck.combinedRatio) <= 1.0) {
                     
                     return {
                         section: section,

@@ -202,6 +202,81 @@ h2 {
     white-space: pre-wrap;
 }
 
+.profile-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 2px solid var(--border-color);
+    padding-bottom: 0.5rem;
+}
+
+.tab-button {
+    padding: 0.8rem 2rem;
+    border: none;
+    border-radius: 6px 6px 0 0;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background-color: var(--background-light);
+    color: var(--text-color);
+}
+
+.tab-button.active {
+    background-color: var(--secondary-color);
+    color: white;
+}
+
+.tab-button:hover:not(.active) {
+    background-color: var(--border-color);
+}
+
+.profile-results {
+    display: none;
+    animation: fadeIn 0.3s ease;
+}
+
+.profile-results.active {
+    display: block;
+}
+
+.results-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1.5rem;
+    background: white;
+    box-shadow: 0 1px 3px var(--shadow-color);
+}
+
+.results-table th,
+.results-table td {
+    padding: 1rem;
+    text-align: left;
+    border: 1px solid var(--border-color);
+}
+
+.results-table th {
+    background-color: var(--background-light);
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.results-table tbody tr {
+    transition: background-color 0.2s ease;
+}
+
+.results-table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+.calculation-details {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    margin-top: 1.5rem;
+}
+
 /* Schematics section styling */
 .schematics-frame {
     margin-top: 3rem;
@@ -311,6 +386,32 @@ footer {
     padding: 2rem 0;
     color: var(--text-light);
     font-size: 0.9rem;
+}
+
+/* Status indicators */
+.status-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    margin-right: 0.5rem;
+}
+
+.status-success {
+    background-color: var(--success-color);
+    color: white;
+}
+
+.status-failure {
+    background-color: var(--danger-color);
+    color: white;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 /* Responsive adjustments */

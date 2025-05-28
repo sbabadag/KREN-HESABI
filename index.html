@@ -33,19 +33,18 @@
                     <!-- İkincil giriş alanları -->
                     <div class="secondary-inputs">
                         <div class="input-row">
-                            <label for="wc">wc (Kren ağırlığı):</label>
-                            <input type="number" id="wc" step="0.01" value="380.0" title="wc - Kren köprüsünün kendi ağırlığı (kN)" readonly>
+                            <label for="wc">wc (Kren ağırlığı):</label>                            <input type="number" id="wc" step="0.01" value="380.0" title="wc - Kren köprüsünün kendi ağırlığı (kN)">
                         </div>
                         <div class="input-row">
                             <label for="wcb">wcb (Kedi ağırlığı):</label>
-                            <input type="number" id="wcb" step="0.01" value="50.0" title="wcb - Kedi arabasının kendi ağırlığı (kN)" readonly>
+                            <input type="number" id="wcb" step="0.01" value="50.0" title="wcb - Kedi arabasının kendi ağırlığı (kN)">
                         </div>                        <div class="input-row">
                             <label for="ah">ah (Yaklaşma mesafesi):</label>
-                            <input type="number" id="ah" step="0.01" value="0.8" title="ah - Kedi arabasının ray sonuna yaklaşma mesafesi (m)" readonly>
+                            <input type="number" id="ah" step="0.01" value="0.8" title="ah - Kedi arabasının ray sonuna yaklaşma mesafesi (m)">
                         </div>
                         <div class="input-row">
                             <label for="aw">aw (Tekerler arası mesafe):</label>
-                            <input type="number" id="aw" step="0.01" value="1.56" title="aw - Kedi arabasının tekerlek aksları arasındaki mesafe (m)" readonly>
+                            <input type="number" id="aw" step="0.01" value="1.56" title="aw - Kedi arabasının tekerlek aksları arasındaki mesafe (m)">
                         </div>
                     </div>
                 </div>
@@ -73,12 +72,77 @@
                         <div id="beam-diagram" class="schematic-svg"></div>
                     </div>
                 </div>
-            </div>
-  
-              <!-- Sonuç bölümü -->
+            </div>              <!-- Sonuç bölümü -->
             <div class="result-frame">
                 <h2>Sonuçlar:</h2>
-                <pre id="result-label"></pre>
+                <div class="profile-tabs">
+                    <button class="tab-button active" data-profile="IPE">IPE</button>
+                    <button class="tab-button" data-profile="HEA">HEA</button>
+                    <button class="tab-button" data-profile="HEB">HEB</button>
+                    <button class="tab-button" data-profile="HEM">HEM</button>
+                </div>
+                <div class="results-container">
+                    <div class="profile-results active" id="IPE-results">
+                        <table class="results-table">
+                            <thead>
+                                <tr>
+                                    <th>Profil</th>
+                                    <th>Kesit Kontrolleri</th>
+                                    <th>Yanal Burkulma</th>
+                                    <th>Sehim</th>
+                                    <th>Sonuç</th>
+                                </tr>
+                            </thead>
+                            <tbody id="IPE-table-body"></tbody>
+                        </table>
+                        <div class="calculation-details" id="IPE-details"></div>
+                    </div>
+                    <div class="profile-results" id="HEA-results">
+                        <table class="results-table">
+                            <thead>
+                                <tr>
+                                    <th>Profil</th>
+                                    <th>Kesit Kontrolleri</th>
+                                    <th>Yanal Burkulma</th>
+                                    <th>Sehim</th>
+                                    <th>Sonuç</th>
+                                </tr>
+                            </thead>
+                            <tbody id="HEA-table-body"></tbody>
+                        </table>
+                        <div class="calculation-details" id="HEA-details"></div>
+                    </div>
+                    <div class="profile-results" id="HEB-results">
+                        <table class="results-table">
+                            <thead>
+                                <tr>
+                                    <th>Profil</th>
+                                    <th>Kesit Kontrolleri</th>
+                                    <th>Yanal Burkulma</th>
+                                    <th>Sehim</th>
+                                    <th>Sonuç</th>
+                                </tr>
+                            </thead>
+                            <tbody id="HEB-table-body"></tbody>
+                        </table>
+                        <div class="calculation-details" id="HEB-details"></div>
+                    </div>
+                    <div class="profile-results" id="HEM-results">
+                        <table class="results-table">
+                            <thead>
+                                <tr>
+                                    <th>Profil</th>
+                                    <th>Kesit Kontrolleri</th>
+                                    <th>Yanal Burkulma</th>
+                                    <th>Sehim</th>
+                                    <th>Sonuç</th>
+                                </tr>
+                            </thead>
+                            <tbody id="HEM-table-body"></tbody>
+                        </table>
+                        <div class="calculation-details" id="HEM-details"></div>
+                    </div>
+                </div>
             </div>
             
             <!-- Burkulma açıklamaları bölümü -->            <div class="info-frame">

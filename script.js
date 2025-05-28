@@ -166,10 +166,123 @@ document.addEventListener('DOMContentLoaded', function() {
     };
     
     // Hesapla düğmesine tıklama olayı ekle
-    calculateBtn.addEventListener('click', hesaplaWeb);
-      // Varsayılan değerler düğmesine tıklama olayı ekle
-    defaultBtn.addEventListener('click', setDefaultValues);
-    
+    calculateBtn.addEventListener('click', function() {
+        const inputs = {
+            Lc: parseFloat(document.getElementById('Lc').value),
+            wcap: parseFloat(document.getElementById('wcap').value),
+            wc: parseFloat(document.getElementById('wc').value),
+            wcb: parseFloat(document.getElementById('wcb').value),
+            ah: parseFloat(document.getElementById('ah').value),
+            aw: parseFloat(document.getElementById('aw').value),
+            L: parseFloat(document.getElementById('L').value)
+        };
+
+        // Check if all inputs are valid
+        if (Object.values(inputs).some(isNaN)) {
+            alert('Lütfen tüm alanları doldurun');
+            return;
+        }
+
+        // Calculate results for each profile type
+        const results = [];
+        
+        // IPE Profilleri için hesapla
+        IPEsections.forEach(section => {
+            const result = calculateProfileResults(section, inputs);
+            results.push(result);
+        });
+
+        // HEA Profilleri için hesapla
+        HEAsections.forEach(section => {
+            const result = calculateProfileResults(section, inputs);
+            results.push(result);
+        });
+
+        // Display results
+        displayResults(results);
+        
+        // Show active results tab
+        document.querySelector('.profile-results').classList.add('active');
+    });
+
+    function calculateProfileResults(section, inputs) {
+        const [name, h, b, tw, tf, Iy, Wel, Wpl] = section;
+        
+        // Kesit özellikleri
+        const A = 2 * b * tf + (h - 2 * tf) * tw;  // Kesit alanı
+        const Ix = Iy;  // Atalet momenti
+        
+        // Yükler
+        const totalLoad = inputs.wc + inputs.wcb + inputs.wcap;  // Toplam yük
+        const M = (totalLoad * inputs.L) / 4;  // Maksimum moment
+        const V = totalLoad / 2;  // Maksimum kesme kuvveti
+        
+        // Kesit kontrolleri
+        const sigma = M * 1000000 / Wpl;  // Eğilme gerilmesi (MPa)
+        const tau = V * 1000 / (tw * (h - 2 * tf));  // Kesme gerilmesi (MPa)
+        const sectionRatio = Math.sqrt(Math.pow(sigma/235, 2) + 3 * Math.pow(tau/135, 2));
+        const sectionChecks = sectionRatio <= 1.0;
+        
+        // Yanal burkulma kontrolü
+        const E = 210000;  // Elastisite modülü (MPa)
+        const Lcr = inputs.L * 1000;  // Kritik boy (mm)
+        const i = Math.sqrt(Ix / A);  // Atalet yarıçapı
+        const lambda = Lcr / i;  // Narinlik
+        const lambdaRef = Math.PI * Math.sqrt(E / 235);  // Referans narinlik
+        const ltbRatio = lambda / lambdaRef;
+        const ltbCheck = ltbRatio <= 2.0;
+        
+        // Sehim kontrolü
+        const I = Ix * 10000;  // mm4'den cm4'e çevir
+        const deflection = (5 * totalLoad * Math.pow(inputs.L * 1000, 4)) / (384 * E * I);
+        const deflectionLimit = (inputs.L * 1000) / 500;  // L/500 kriteri
+        const deflectionCheck = deflection <= deflectionLimit;
+        
+        // Detaylı hesap raporu
+        const details = `
+            <div class="calculation-section">
+                <h4>Kesit Özellikleri</h4>
+                <p>Alan: ${A.toFixed(2)} cm²</p>
+                <p>Atalet Momenti: ${Ix.toFixed(0)} cm⁴</p>
+                <p>Plastik Mukavemet Momenti: ${Wpl.toFixed(0)} cm³</p>
+            </div>
+            <div class="calculation-section">
+                <h4>Yük Analizi</h4>
+                <p>Toplam Yük: ${totalLoad.toFixed(1)} kN</p>
+                <p>Maksimum Moment: ${M.toFixed(1)} kNm</p>
+                <p>Maksimum Kesme: ${V.toFixed(1)} kN</p>
+            </div>
+            <div class="calculation-section">
+                <h4>Gerilme Kontrolleri</h4>
+                <p>Eğilme Gerilmesi: ${sigma.toFixed(1)} MPa</p>
+                <p>Kesme Gerilmesi: ${tau.toFixed(1)} MPa</p>
+                <p>Birleşik Gerilme Oranı: ${sectionRatio.toFixed(2)}</p>
+            </div>
+            <div class="calculation-section">
+                <h4>Burkulma Analizi</h4>
+                <p>Narinlik: ${lambda.toFixed(1)}</p>
+                <p>Burkulma Oranı: ${ltbRatio.toFixed(2)}</p>
+            </div>
+            <div class="calculation-section">
+                <h4>Sehim Kontrolü</h4>
+                <p>Sehim: ${deflection.toFixed(1)} mm</p>
+                <p>İzin Verilen: ${deflectionLimit.toFixed(1)} mm</p>
+            </div>
+        `;
+
+        return {
+            profile: name,
+            sectionChecks,
+            sectionRatio,
+            ltbCheck,
+            ltbRatio,
+            deflection,
+            deflectionCheck,
+            isValid: sectionChecks && ltbCheck && deflectionCheck,
+            details
+        };
+    }
+
     // Şematik diyagramları oluşturan fonksiyonlar
     function drawCraneSideView(params) {
         const { Lc, ah, wc, wcb, wcap } = params;
@@ -1096,5 +1209,75 @@ document.addEventListener('DOMContentLoaded', function() {
     // Trigger initial update if values are present
     if (document.getElementById('wcap').value && document.getElementById('Lc').value) {
         updateWeights();
+    }
+    
+    // Tab switching functionality
+    document.querySelectorAll('.tab-button').forEach(button => {
+        button.addEventListener('click', () => {
+            // Remove active class from all tabs and contents
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.profile-results').forEach(result => result.classList.remove('active'));
+            
+            // Add active class to clicked tab and its content
+            button.classList.add('active');
+            document.getElementById(`${button.dataset.profile}-results`).classList.add('active');
+        });
+    });
+
+    function displayResults(results) {
+        ['IPE', 'HEA', 'HEB', 'HEM'].forEach(profileType => {
+            const tableBody = document.getElementById(`${profileType}-table-body`);
+            const detailsDiv = document.getElementById(`${profileType}-details`);
+            
+            // Clear previous results
+            tableBody.innerHTML = '';
+            detailsDiv.innerHTML = '';
+            
+            // Filter results for current profile type
+            const profileResults = results.filter(r => r.profile.startsWith(profileType));
+            
+            // Populate table
+            profileResults.forEach(result => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${result.profile}</td>
+                    <td>
+                        <span class="status-icon ${result.sectionChecks ? 'status-success' : 'status-failure'}">
+                            ${result.sectionChecks ? '✓' : '✗'}
+                        </span>
+                        ${result.sectionRatio.toFixed(2)}
+                    </td>
+                    <td>
+                        <span class="status-icon ${result.ltbCheck ? 'status-success' : 'status-failure'}">
+                            ${result.ltbCheck ? '✓' : '✗'}
+                        </span>
+                        ${result.ltbRatio.toFixed(2)}
+                    </td>
+                    <td>
+                        <span class="status-icon ${result.deflectionCheck ? 'status-success' : 'status-failure'}">
+                            ${result.deflectionCheck ? '✓' : '✗'}
+                        </span>
+                        ${result.deflection.toFixed(1)} mm
+                    </td>
+                    <td>
+                        <span class="status-icon ${result.isValid ? 'status-success' : 'status-failure'}">
+                            ${result.isValid ? '✓' : '✗'}
+                        </span>
+                    </td>
+                `;
+                
+                // Add click handler to show details
+                row.addEventListener('click', () => {
+                    detailsDiv.innerHTML = `
+                        <h3>${result.profile} Hesap Detayları</h3>
+                        <div class="calculation-details-content">
+                            ${result.details}
+                        </div>
+                    `;
+                });
+                
+                tableBody.appendChild(row);
+            });
+        });
     }
 });

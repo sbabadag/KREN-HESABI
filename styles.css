@@ -233,11 +233,19 @@ h2 {
 
 .profile-results {
     display: none;
-    animation: fadeIn 0.3s ease;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s;
+    height: 0;
+    overflow: hidden;
 }
 
 .profile-results.active {
     display: block;
+    opacity: 1;
+    visibility: visible;
+    height: auto;
+    overflow: visible;
 }
 
 .results-table {

@@ -231,11 +231,11 @@ document.addEventListener('DOMContentLoaded', function() {
         const lambdaRef = Math.PI * Math.sqrt(E / 235);  // Referans narinlik
         const ltbRatio = lambda / lambdaRef;
         const ltbCheck = ltbRatio <= 2.0;
-        
-        // Sehim kontrolü
+          // Sehim kontrolü
         const I = Ix * 10000;  // mm4'den cm4'e çevir
         const deflection = (5 * totalLoad * Math.pow(inputs.L * 1000, 4)) / (384 * E * I);
-        const deflectionLimit = (inputs.L * 1000) / 500;  // L/500 kriteri
+        const deflectionLimit = (inputs.L * 1000) / 500;  // L/500 sehim sınırı
+        const deflectionRatio = deflection / deflectionLimit;  // Sehim oranı
         const deflectionCheck = deflection <= deflectionLimit;
         
         // Detaylı hesap raporu
@@ -262,11 +262,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 <h4>Burkulma Analizi</h4>
                 <p>Narinlik: ${lambda.toFixed(1)}</p>
                 <p>Burkulma Oranı: ${ltbRatio.toFixed(2)}</p>
-            </div>
-            <div class="calculation-section">
-                <h4>Sehim Kontrolü</h4>
-                <p>Sehim: ${deflection.toFixed(1)} mm</p>
-                <p>İzin Verilen: ${deflectionLimit.toFixed(1)} mm</p>
+            </div>            <div class="calculation-section">
+                <h4>Sehim Kontrolü (L/500)</h4>
+                <p>Hesaplanan Sehim: ${deflection.toFixed(1)} mm</p>
+                <p>İzin Verilen Sehim: ${deflectionLimit.toFixed(1)} mm</p>
+                <p>Sehim Oranı: ${deflectionRatio.toFixed(2)} ${deflectionCheck ? '✓' : '✗'}</p>
             </div>
         `;
 
@@ -1212,17 +1212,30 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Tab switching functionality
-    document.querySelectorAll('.tab-button').forEach(button => {
-        button.addEventListener('click', () => {
-            // Remove active class from all tabs and contents
-            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
-            document.querySelectorAll('.profile-results').forEach(result => result.classList.remove('active'));
-            
-            // Add active class to clicked tab and its content
-            button.classList.add('active');
-            document.getElementById(`${button.dataset.profile}-results`).classList.add('active');
+    function setupTabSwitching() {
+        const tabButtons = document.querySelectorAll('.tab-button');
+        const profileResults = document.querySelectorAll('.profile-results');
+
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const profileType = button.getAttribute('data-profile');
+                
+                // Deactivate all tabs and contents
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                profileResults.forEach(result => result.classList.remove('active'));
+                
+                // Activate selected tab and content
+                button.classList.add('active');
+                const selectedContent = document.getElementById(`${profileType}-results`);
+                if (selectedContent) {
+                    selectedContent.classList.add('active');
+                }
+            });
         });
-    });
+    }
+
+    // Initialize tab switching
+    setupTabSwitching();
 
     function displayResults(results) {
         ['IPE', 'HEA', 'HEB', 'HEM'].forEach(profileType => {

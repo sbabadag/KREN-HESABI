@@ -3,9 +3,39 @@ document.addEventListener('DOMContentLoaded', function() {
     // DOM elementlerini yakala
     const calculateBtn = document.getElementById('calculate-btn');
     const defaultBtn = document.getElementById('default-btn');
+    const predictBtn = document.getElementById('predict-btn');
     const resultLabel = document.getElementById('result-label');
     const sectionResultsDiv = document.createElement('div');
     sectionResultsDiv.id = 'section-results';
+    
+    // Öngör butonuna tıklama event listener'ı ekle
+    predictBtn.addEventListener('click', function() {
+        updateWeights();
+        animatePrediction();
+    });
+    
+    // Tahmin animasyonu
+    function animatePrediction() {
+        const secondaryInputs = document.querySelectorAll('.secondary-inputs input');
+        secondaryInputs.forEach((input, index) => {
+            setTimeout(() => {
+                input.style.backgroundColor = '#e3f2fd';
+                setTimeout(() => {
+                    input.style.backgroundColor = '';
+                }, 500);
+            }, index * 100);
+        });
+    }
+    
+    // Input değişikliklerini izle
+    ['Lc', 'wcap', 'L'].forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.addEventListener('blur', function() {
+                this.blur();
+            });
+        }
+    });
     
     // Şema container elementlerini yakala
     const craneSideView = document.getElementById('crane-side-view');
@@ -14,7 +44,22 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // result-frame'in içine section-results div'ini ekle
     document.querySelector('.result-frame').appendChild(sectionResultsDiv);
-    
+
+    // Event listeners for autofill functionality
+    ['wcap', 'Lc'].forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.addEventListener('blur', updateWeights);
+        }
+    });
+
+    // Debounce function to prevent too frequent updates
+    let debounceTimer;
+    function debounceInput() {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(updateWeights, 300); // 300ms delay
+    }
+
     // IPE kesit verileri [Ad, h (mm), b (mm), tw (mm), tf (mm), Iy (cm4), Wel,y (cm3), Wpl,y (cm3)]
     const IPEsections = [
         ["IPE 80", 80, 46, 3.8, 5.2, 80.1, 20.0, 23.2],
@@ -1002,12 +1047,11 @@ document.addEventListener('DOMContentLoaded', function() {
         const validCapacity = Math.max(2, Math.min(100, capacity));
         const validSpan = Math.max(10, Math.min(40, span));
         
-        if (validCapacity !== capacity) {
-            document.getElementById('wcap').value = (validCapacity * 10).toFixed(1); // Ton'dan kN'a çevir
-        }
-        if (validSpan !== span) {
-            document.getElementById('Lc').value = validSpan.toFixed(1);
-        }
+        // Değerleri güncelle ve odağı korumak için activeElement'i sakla
+        const activeElement = document.activeElement;
+        
+        wcapInput.value = (validCapacity * 10).toFixed(1);
+        LcInput.value = validSpan.toFixed(1);
         
         const weights = findCraneWeights(validCapacity, validSpan);
         
@@ -1017,10 +1061,16 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Tipik yaklaşma mesafesi ve tekerlek mesafesini güncelle
         updateRelatedDimensions(validSpan, validCapacity);
+        
+        // Eğer input alanı hala odaktaysa, odağı geri getir
+        if (activeElement && (activeElement === wcapInput || activeElement === LcInput)) {
+            activeElement.focus();
+        }
     }
 
-    // İlgili boyutları güncelleyen fonksiyon
     function updateRelatedDimensions(span, capacity) {
+        console.log('Updating dimensions:', { span, capacity }); // Debug log
+        
         // Yaklaşma mesafesi (ah) için tipik değerler
         let ah;
         if (capacity <= 5) ah = 0.6;
@@ -1043,15 +1093,8 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('L').value = L.toFixed(1);
     }
 
-    // Initialize event listeners for autofill fields
-    document.addEventListener('DOMContentLoaded', function() {
-        // Add event listeners for both input and change events
-        ['wcap', 'Lc'].forEach(id => {
-            const element = document.getElementById(id);
-            if (element) {
-                element.addEventListener('input', updateWeights);
-                element.addEventListener('change', updateWeights);
-            }
-        });
-    });
+    // Trigger initial update if values are present
+    if (document.getElementById('wcap').value && document.getElementById('Lc').value) {
+        updateWeights();
+    }
 });

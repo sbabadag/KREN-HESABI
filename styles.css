@@ -1,501 +1,374 @@
-/* styles.css - Enhanced for crane calculation visualization */
+/* Reset and base styles */
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    font-family: Arial, sans-serif;
+}
+
+:root {
+    --primary-color: #2c3e50;
+    --secondary-color: #3498db;
+    --accent-color: #f1c40f;
+    --success-color: #2ecc71;
+    --danger-color: #e74c3c;
+    --text-color: #2c3e50;
+    --text-light: #7f8c8d;
+    --background-light: #f8f9fa;
+    --border-color: #dcdde1;
+    --shadow-color: rgba(0, 0, 0, 0.1);
 }
 
 body {
-    background-color: #f5f5f5;
-    padding: 20px;
-    color: #333;
+    font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    line-height: 1.6;
+    color: var(--text-color);
+    background-color: var(--background-light);
 }
 
 .container {
-    max-width: 900px;
+    max-width: 1200px;
     margin: 0 auto;
-    background-color: white;
-    border-radius: 10px;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
-    padding: 20px;
+    padding: 2rem;
 }
 
 h1 {
+    font-size: 2.5rem;
+    color: var(--primary-color);
     text-align: center;
-    margin-bottom: 20px;
-    color: #2c3e50;
-    border-bottom: 2px solid #3498db;
-    padding-bottom: 10px;
+    margin-bottom: 2rem;
+    font-weight: 600;
 }
 
 h2 {
-    margin-bottom: 15px;
-    font-size: 1.3em;
-    color: #2c3e50;
-    border-left: 4px solid #3498db;
-    padding-left: 10px;
+    font-size: 1.8rem;
+    color: var(--primary-color);
+    margin-bottom: 1.5rem;
+    font-weight: 500;
 }
 
-h3 {
-    margin-bottom: 10px;
-    font-size: 1.1em;
-    color: #34495e;
-}
-
+/* Main frame styling */
 .main-frame {
-    display: flex;
-    flex-direction: column;
-    gap: 25px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px var(--shadow-color);
+    padding: 2rem;
+    margin-bottom: 2rem;
 }
 
-.input-frame, .descriptions-frame, .result-frame, .schematics-frame, .info-frame {
-    border: 1px solid #ddd;
+/* Input section styling */
+.input-frame {
+    background: white;
+    padding: 1.5rem;
     border-radius: 8px;
-    padding: 20px;
-    background-color: #fafafa;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    margin-bottom: 2rem;
 }
 
 .input-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
 }
 
+/* Primary inputs styling */
+.primary-inputs {
+    background: var(--accent-color);
+    padding: 1.5rem;
+    border-radius: 8px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr) auto;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 4px 12px rgba(241, 196, 15, 0.2);
+    align-items: end;
+}
+
+/* Secondary inputs styling */
+.secondary-inputs {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+    padding: 1rem;
+    background: var(--background-light);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+/* Input row styling */
 .input-row {
     display: flex;
-    align-items: center;
-    background-color: #fff;
-    padding: 10px;
-    border-radius: 5px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    flex-direction: column;
+    gap: 0.5rem;
 }
 
-label {
-    width: 60px;
-    font-weight: bold;
-    margin-right: 10px;
-    color: #2c3e50;
+.input-row.label {
+    font-weight: 500;
+    color: var(--text-color);
+    font-size: 0.95rem;
 }
 
-input {
-    width: 100px;
-    padding: 8px 10px;
-    border: 1px solid #bdc3c7;
-    border-radius: 4px;
-    font-size: 14px;
-    transition: border-color 0.3s;
+.input-row input {
+    padding: 0.8rem 1rem;
+    border: 2px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    width: 100%;
 }
 
-input:focus {
+.input-row input:focus {
+    border-color: var(--secondary-color);
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
     outline: none;
-    border-color: #3498db;
-    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
 }
 
+.input-row input:read-only {
+    background-color: var(--background-light);
+    border-color: var(--border-color);
+    color: var(--text-light);
+}
+
+/* Button styling */
 .button-frame {
     display: flex;
-    gap: 15px;
+    gap: 1rem;
+    margin-top: 2rem;
     justify-content: center;
-    margin-top: 25px;
 }
 
-/* Tooltip styling */
-[title] {
-    position: relative;
-    cursor: help;
-}
-
-[title]:hover::before {
-    content: attr(title);
-    position: absolute;
-    bottom: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 5px 10px;
-    background: #2c3e50;
-    color: white;
-    font-size: 12px;
-    white-space: nowrap;
-    border-radius: 4px;
-    z-index: 100;
-}
-
-[title]:hover::after {
-    content: '';
-    position: absolute;
-    bottom: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    border: 6px solid transparent;
-    border-top-color: #2c3e50;
-    margin-bottom: -12px;
-}
-
-button {
-    padding: 12px 24px;
+.calc-btn, .default-btn {
+    padding: 0.8rem 2rem;
     border: none;
-    border-radius: 5px;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 500;
     cursor: pointer;
-    font-weight: bold;
-    min-width: 150px;
-    transition: all 0.3s;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
 }
 
 .calc-btn {
-    background-color: #2ecc71;
+    background-color: var(--secondary-color);
     color: white;
 }
 
 .calc-btn:hover {
-    background-color: #27ae60;
+    background-color: #2980b9;
+    transform: translateY(-1px);
 }
 
 .default-btn {
-    background-color: #3498db;
-    color: white;
+    background-color: var(--background-light);
+    color: var(--text-color);
+    border: 2px solid var(--border-color);
 }
 
 .default-btn:hover {
-    background-color: #2980b9;
+    background-color: var(--border-color);
 }
 
-pre {
-    background-color: #f9f9f9;
-    padding: 15px;
-    border-left: 4px solid #3498db;
-    font-family: monospace;
-    overflow-x: auto;
-    line-height: 1.5;
+.predict-btn {
+    padding: 0.8rem 1.5rem;
+    border: none;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background-color: var(--primary-color);
+    color: white;
+    height: 42px; /* Match input height */
+    white-space: nowrap;
 }
 
-footer {
-    margin-top: 30px;
-    text-align: center;
-    font-size: 0.9em;
-    color: #7f8c8d;
-    padding: 10px;
+.predict-btn:hover {
+    background-color: #1a2634;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(44, 62, 80, 0.2);
 }
 
-/* Şematik diyagramlar için stiller */
+/* Results section styling */
+.result-frame {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    margin-top: 2rem;
+    border: 1px solid var(--border-color);
+}
+
+#result-label {
+    font-family: 'Consolas', monospace;
+    padding: 1rem;
+    background: var(--background-light);
+    border-radius: 6px;
+    white-space: pre-wrap;
+}
+
+/* Schematics section styling */
+.schematics-frame {
+    margin-top: 3rem;
+    overflow: hidden; /* Hide overflow */
+}
+
 .schematics-container {
     display: flex;
-    flex-direction: column;
-    gap: 30px;
-    margin-top: 10px;
-    width: 100%;
+    gap: 2rem;
+    margin: 1.5rem -1rem; /* Negative margin to compensate for padding */
+    padding: 1rem;
+    overflow-x: auto;
+    scroll-behavior: smooth; /* Smooth scrolling */
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+    scrollbar-width: thin;
+    scrollbar-color: var(--secondary-color) var(--background-light);
+}
+
+/* Customize scrollbar */
+.schematics-container::-webkit-scrollbar {
+    height: 8px;
+}
+
+.schematics-container::-webkit-scrollbar-track {
+    background: var(--background-light);
+    border-radius: 4px;
+}
+
+.schematics-container::-webkit-scrollbar-thumb {
+    background-color: var(--secondary-color);
+    border-radius: 4px;
 }
 
 .schematic-item {
-    background-color: #fff;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    padding: 15px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: 100%;
+    background: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 16px var(--shadow-color);
+    flex: 0 0 calc(33.333% - 1.33rem); /* Equal width panels with gap consideration */
+    min-width: 320px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border: 1px solid var(--border-color);
+}
+
+.schematic-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px var(--shadow-color);
 }
 
 .schematic-item h3 {
-    color: #2c3e50;
-    border-bottom: 2px solid #3498db;
-    padding-bottom: 5px;
-    width: 100%;
-    text-align: center;
-    margin-bottom: 15px;
+    color: var(--primary-color);
+    margin-bottom: 1rem;
+    font-size: 1.2rem;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.schematic-item h3::before {
+    content: '';
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background-color: var(--secondary-color);
+    border-radius: 50%;
 }
 
 .schematic-svg {
     width: 100%;
-    height: auto;
-    min-height: 400px;
-    aspect-ratio: 3 / 2;
-    background-color: #f9f9f9;
-    border-radius: 5px;
-    overflow: visible;
-    margin-top: 10px;
-    margin-bottom: 30px;
-    border: 1px solid #ecf0f1;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 10px;
-}
-
-/* SVG öğeleri için stiller */
-.crane-line {
-    stroke: #2c3e50;
-    stroke-width: 2;
-    fill: none;
-}
-
-.crane-load {
-    stroke: #e74c3c;
-    stroke-width: 2;
-    fill: none;
-}
-
-.force-arrow {
-    stroke: #3498db;
-    stroke-width: 2;
-    fill: none;
-}
-
-.dimension-line {
-    stroke: #7f8c8d;
-    stroke-width: 1;
-    stroke-dasharray: 4, 2;
-}
-
-.text-label {
-    font-size: 12px;
-    fill: #34495e;
-    font-family: Arial, sans-serif;
-}
-
-/* Kesit sonuçları için stiller */
-#section-results {
-    margin-top: 20px;
-}
-
-.section-title-main {
-    font-size: 1.2em;
-    font-weight: bold;
-    color: #2c3e50;
-    margin: 20px 0 15px;
-    text-align: center;
-    border-bottom: 2px solid #3498db;
-    padding-bottom: 5px;
-}
-
-.sections-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 20px;
-    margin-top: 15px;
-}
-
-.section-column {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-.section-container {
-    background-color: #fff;
+    height: 280px;
+    background: var(--background-light);
     border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    padding: 15px;
+    border: 1px solid var(--border-color);
+    transition: all 0.3s ease;
     display: flex;
-    flex-direction: column;
     align-items: center;
-    width: 100%;
+    justify-content: center;
+    overflow: hidden;
 }
 
-.section-title {
-    font-size: 1.1em;
-    font-weight: bold;
-    color: #2c3e50;
-    margin-bottom: 10px;
-    text-align: center;
-}
-
-.section-not-found {
-    color: #e74c3c;
-    text-align: center;
-    padding: 15px;
-    border: 1px dashed #e74c3c;
-    border-radius: 5px;
-    margin: 10px 0;
-    width: 100%;
-}
-
-.section-dimensions {
-    width: 100%;
-    margin-top: 15px;
-    border-top: 1px solid #ecf0f1;
-    padding-top: 10px;
-}
-
-.dimension-row {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 5px;
-    font-size: 0.9em;
-}
-
-.dimension-label {
-    font-weight: bold;
-    color: #2c3e50;
-}
-
-.dimension-value {
-    color: #3498db;
-}
-
-.section-buckling-title {
-    font-weight: bold;
-    color: #2c3e50;
-    margin-top: 10px;
-    margin-bottom: 5px;
-    border-top: 1px dashed #ecf0f1;
-    padding-top: 8px;
-}
-
-.safe {
-    color: #27ae60;
-    font-weight: bold;
-}
-
-.unsafe {
-    color: #e74c3c;
-    font-weight: bold;
-}
-
-/* Burkulma bilgileri için stiller */
-.info-frame {
-    margin-top: 25px;
-}
-
-.info-content {
-    background-color: #fff;
-    border-radius: 5px;
-    padding: 15px;
-    box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.1);
-}
-
-.info-content p {
-    margin-bottom: 15px;
-    line-height: 1.6;
-}
-
-.info-content ul {
-    margin: 10px 0 15px 20px;
-}
-
-.info-content li {
-    margin-bottom: 8px;
-    line-height: 1.5;
-}
-
-.info-note {
-    background-color: #f8f9fa;
-    border-left: 4px solid #3498db;
-    padding: 10px;
-    margin-top: 15px;
-    font-size: 0.95em;
-    color: #2c3e50;
-}
-
-/* Formül kutusu stilleri */
+/* Formula box styling */
 .formula-box {
-    background-color: #f1f8fe;
-    border: 1px solid #d1e8ff;
-    border-radius: 5px;
-    padding: 10px 15px;
-    margin: 15px 0;
+    background: var(--background-light);
+    padding: 1.5rem;
+    border-radius: 8px;
+    margin: 1.5rem 0;
+    border: 1px solid var(--border-color);
 }
 
 .formula-title {
-    font-weight: bold;
-    color: #2980b9;
-    margin-bottom: 8px;
-    font-size: 0.95em;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: var(--primary-color);
 }
 
 .formula {
-    font-family: 'Times New Roman', Times, serif;
+    font-family: 'Cambria Math', Georgia, serif;
+    font-size: 1.2rem;
     text-align: center;
-    font-size: 1.1em;
-    margin: 10px 0;
+    margin: 1rem 0;
 }
 
-.formula-desc {
-    font-size: 0.9em;
-    color: #555;
-    font-style: italic;
-    margin-top: 5px;
+/* Footer styling */
+footer {
+    text-align: center;
+    padding: 2rem 0;
+    color: var(--text-light);
+    font-size: 0.9rem;
 }
 
-/* Stiffener bilgileri için stiller */
-.stiffener-info {
-    margin-top: 10px;
-    padding: 10px;
-    background-color: #e8f4f8;
-    border-left: 4px solid #2980b9;
-    border-radius: 4px;
-}
-
-.stiffener-info p {
-    margin: 5px 0;
-    color: #2c3e50;
-}
-
-.stiffener-info strong {
-    color: #2980b9;
-}
-
-/* LTB bilgileri için stiller */
-.ltb-info {
-    margin-top: 10px;
-    padding: 10px;
-    background-color: #fff3e6;
-    border-left: 4px solid #e67e22;
-    border-radius: 4px;
-}
-
-.ltb-info p {
-    margin: 5px 0;
-    color: #2c3e50;
-}
-
-.ltb-info strong {
-    color: #d35400;
-}
-
-/* Mobil görünüm için responsive ayarlar */
+/* Responsive adjustments */
 @media (max-width: 768px) {
     .container {
-        padding: 15px;
+        padding: 1rem;
     }
-    
-    .input-grid {
+
+    .primary-inputs {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .secondary-inputs {
         grid-template-columns: 1fr;
     }
-    
-    .schematics-container {
-        grid-template-columns: 1fr;
+
+    .button-frame {
+        flex-direction: column;
     }
-    
-    .sections-grid {
-        grid-template-columns: 1fr;
-    }
-    
+
     h1 {
-        font-size: 1.5em;
+        font-size: 2rem;
     }
-    
+
     h2 {
-        font-size: 1.2em;
+        font-size: 1.5rem;
+    }
+}
+
+@media (max-width: 1200px) {
+    .schematic-item {
+        flex: 0 0 calc(50% - 1rem);
+    }
+
+    .primary-inputs {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .schematics-container {
+        gap: 1rem;
+        margin: 1rem -0.5rem;
+        padding: 0.5rem;
     }
     
-    button {
-        padding: 10px 15px;
-        min-width: 120px;
+    .schematic-item {
+        flex: 0 0 100%;
+        min-width: 280px;
+        padding: 1rem;
     }
-}
 
-/* Animasyon efektleri */
-@keyframes fade-in {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-.schematic-svg, .section-container {
-    animation: fade-in 0.5s ease-out forwards;
+    .schematic-svg {
+        height: 240px;
+    }
+    
+    .schematic-item h3 {
+        font-size: 1.1rem;
+    }
 }

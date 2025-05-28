@@ -991,20 +991,67 @@ document.addEventListener('DOMContentLoaded', function() {
         };
     }
 
-    // Inputs güncelleme fonksiyonu
+    // Inputs güncelleme fonksiyonu - genişletilmiş
     function updateWeights() {
         const capacity = parseFloat(document.getElementById('wcap').value) / 10; // kN'dan tona çevir
         const span = parseFloat(document.getElementById('Lc').value);
         
-        if (isNaN(capacity) || isNaN(span) || capacity <= 0 || span <= 0) return;
+        if (isNaN(capacity) || isNaN(span)) return;
         
-        const weights = findCraneWeights(capacity, span);
+        // Eğer değerler sınırlar dışındaysa, en yakın sınır değerini kullan
+        const validCapacity = Math.max(2, Math.min(100, capacity));
+        const validSpan = Math.max(10, Math.min(40, span));
         
+        if (validCapacity !== capacity) {
+            document.getElementById('wcap').value = (validCapacity * 10).toFixed(1); // Ton'dan kN'a çevir
+        }
+        if (validSpan !== span) {
+            document.getElementById('Lc').value = validSpan.toFixed(1);
+        }
+        
+        const weights = findCraneWeights(validCapacity, validSpan);
+        
+        // Ağırlıkları güncelle
         document.getElementById('wc').value = weights.craneWeight.toFixed(1);
         document.getElementById('wcb').value = weights.trolleyWeight.toFixed(1);
+        
+        // Tipik yaklaşma mesafesi ve tekerlek mesafesini güncelle
+        updateRelatedDimensions(validSpan, validCapacity);
     }
 
-    // Event listeners
-    document.getElementById('wcap').addEventListener('change', updateWeights);
-    document.getElementById('Lc').addEventListener('change', updateWeights);
+    // İlgili boyutları güncelleyen fonksiyon
+    function updateRelatedDimensions(span, capacity) {
+        // Yaklaşma mesafesi (ah) için tipik değerler
+        let ah;
+        if (capacity <= 5) ah = 0.6;
+        else if (capacity <= 20) ah = 0.8;
+        else if (capacity <= 50) ah = 1.0;
+        else ah = 1.2;
+        
+        // Tekerlek mesafesi (aw) için tipik değerler
+        let aw;
+        if (span <= 15) aw = 1.5;
+        else if (span <= 25) aw = 2.0;
+        else if (span <= 35) aw = 2.5;
+        else aw = 3.0;
+        
+        // Ray uzunluğu (L) için tipik değer (genellikle açıklığın %35-40'ı)
+        const L = Math.ceil(span * 0.35);
+        
+        document.getElementById('ah').value = ah.toFixed(1);
+        document.getElementById('aw').value = aw.toFixed(1);
+        document.getElementById('L').value = L.toFixed(1);
+    }
+
+    // Initialize event listeners for autofill fields
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add event listeners for both input and change events
+        ['wcap', 'Lc'].forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.addEventListener('input', updateWeights);
+                element.addEventListener('change', updateWeights);
+            }
+        });
+    });
 });
